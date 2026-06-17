@@ -1,0 +1,23 @@
+# LLM configuration — snapshot pinning is MANDATORY (Eureka pinned gpt-4-0314; we pin ours).
+# Verified on the OFFICIAL models overview, fetched 2026-06-10 (ADR-016):
+#   https://platform.claude.com/docs/en/about-claude/models/overview
+#   "Every Claude model ID is a pinned snapshot. Starting with the Claude 4.6 generation, model IDs use
+#    a dateless format that is also a pinned snapshot, not an evergreen pointer."
+primary:
+  provider: anthropic
+  model_snapshot: claude-sonnet-4-6   # pinned snapshot id (dateless format, 4.6 generation — see above)
+  price_per_mtok_input_usd: 3.00      # official page, 2026-06-10
+  price_per_mtok_output_usd: 15.00
+  temperature: 1.0                    # Eureka sampling regime; VERIFY vs App. A before first run
+  max_output_tokens: 4096
+open_weights_companion:               # reproducibility companion (FinRL-DeepSeek precedent)
+  provider: deepseek
+  model_snapshot: deepseek-ai/DeepSeek-V3-0324   # dated open-weights checkpoint (HuggingFace revision)
+  note: weights are the reproducibility artifact; API pricing recorded at use time (ADR-016)
+budget:
+  prompt_token_budget_reflection: 1200   # serialized feedback block must fit (src/feedback_schema.py enforces)
+  cache_static_context: true             # env source code cached across the K samples — dominant cost lever
+                                         # (5-min cache: writes 1.25x, reads ~0.1x of input price)
+  log_tokens: true                       # populates the dissertation compute/cost table
+archive:
+  store_full_prompts_and_responses: true # data/candidates/ — verbatim, for model-drift reproducibility

@@ -1,0 +1,38 @@
+# NOTE: SUPERSEDED / UNBOUND COPY — DO NOT TREAT AS AUTHORITATIVE (banner added 2026-06-26).
+#   This file is a stale data_pipeline-local snapshot that NO live code reads and that is NOT in the
+#   freeze hash (`freeze.py::_BOUND_CONFIGS`). It contradicts the frozen design on two points:
+#     • `evaluation.scheme: walk_forward` here — but the campaign runs ONE contiguous sealed split
+#       (`single_sealed_split`, R43); walk-forward is deferred future work.
+#     • `seeds.headline: [0,1,2,3,4]` and `dsr.trial_count_rule: all_candidates_all_arms` here are the
+#       OLD 5-seed / all-candidates settings; the headline runs 30 winner seeds (D2) under the
+#       per-seed rliable IUT framing (R16/R25).
+#   AUTHORITATIVE inference config = the repo-root `config/inference.yaml` (+ `config/preregistration.yaml`
+#   and PREREGISTRATION.md §6–7). Retained only for data_pipeline provenance; flagged for deletion.
+# Inference machinery — PREREGISTRATION.md §6–7. Formulas implemented in src/stats_inference.py.
+seeds: {headline: [0,1,2,3,4], ablation: [0,1,2]}
+
+splits:
+  development: {train: ["2005-01-01","2014-12-31"], validation: ["2015-01-01","2017-12-31"]}  # search lives here ONLY
+  evaluation:  {scheme: walk_forward, train_years: 5, test_years: 1, step_years: 1,
+                span: ["2018-01-01","2025-12-31"]}                                            # frozen winners only
+  embargo_trading_days: 21          # Lopez de Prado 2018
+  cpcv: {n_blocks: 16, purge: true}
+
+fitness:                            # F = SR_val - lambda * max(0, -CVaR_alpha)
+  alpha: 0.05
+  lambda_grid: [0, 1, 2, 5, 10]
+  lambda_frozen: null               # set ONCE by pre-2015 calibration (PREREG §3) + ADR; null = not yet frozen
+  calibration_fold: {train: ["2005-01-01","2012-12-31"], validation: ["2013-01-01","2014-12-31"]}
+
+dsr:   {unannualised_inputs: true, trial_count_rule: all_candidates_all_arms}   # Bailey & Lopez de Prado 2014
+pbo:   {n_blocks: 16}                                                           # CSCV
+sharpe_test: {method: ledoit_wolf_2008, bootstrap: circular_block, block_size: 5, n_boot: 4999}
+multiplicity: {method: benjamini_hochberg, q: 0.05}
+
+distributional_feedback:
+  alpha_grid: [0.01, 0.05, 0.10, 0.25]    # CVaR profile levels (Kusuoka discretisation)
+  sort_quantiles_before_stats: true        # IQN crossing fix (NeurIPS 2020); crossing_rate reported pre-sort
+
+regimes:
+  hmm: {n_states: 3, covariance_type: full, em_restarts: 10, fit_scope: train_only,
+        probabilities: filtered, shift_days: 1}

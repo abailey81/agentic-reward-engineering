@@ -1,0 +1,125 @@
+# Data design — PREREGISTRATION.md §5.
+window: {start: "2005-01-01", end: "2026-06-30"}   # extended to the SETTLED 2026-06-30 cutoff (ADR-051)
+
+universe:
+  index: SP500
+  membership_sources:
+    refinitiv_field: TR.IndexConstituentRIC      # reliable >= ~2016 (LSEG forum)
+    datastream_lists: "LS&PCOMP + MMYY"          # monthly constituent lists, 1989->; pre-2016 backbone
+  selection_rule: top30_marketcap_at_window_start
+  leaver_treatment: liquidate_last_price_net_of_cost
+
+series:
+  total_return_fields: {datastream: RI, refinitiv: TR.TotalReturn}
+  delisting_corrections: {nyse_amex: -0.30, nasdaq: -0.55}    # Shumway 1997; Shumway & Warther 1999
+  delisting_reason_classes:                                   # gate the surcharge ONCE a reason is re-pulled
+    # M&A keeps the vendor terminal / last price (NO surcharge — the holder was cashed out, often at a
+    # premium); performance/compliance/bankruptcy terminations get the -30/-55 Shumway surcharge. The
+    # frozen rf_meta_* pull carries NO reason (verified), so EVERY name currently classifies "absent ->
+    # surcharge" and univ4 is byte-identical to the un-gated build; this is latent until the reason field is re-pulled.
+    mna_keep_terminal: [merger, acquisition, acquired, "m&a", buyout, "taken private",
+                        privatization, "going private", takeover, "stock swap", "scheme of arrangement"]
+    performance_surcharge: [bankruptcy, "chapter 11", "chapter 7", liquidation, insolvency, delisted,
+                            "listing standards", compliance, "deficient", default, "regulatory"]
+  screens:                                                     # Ince & Porter 2006
+    min_prior_price_usd: 1.00
+    extreme_return_reversal: {threshold: 3.00, action: set_missing}
+
+# Universe acquisition bill-of-materials (A1-A5) — wired by src/data/pull_universe.py /
+# `make pull-universe`; RUNS only once entitlement lands (ADR-019). Refinitiv field strings are the
+# documented TR.* / Datastream mnemonics; any marked VERIFY must be confirmed by the entitled probe
+# before the first live pull (the probe writes the confirmed mnemonic back into docs/evidence/).
+# IDENTIFICATION IS UNTOUCHED: none of A3-A5 enters the state vector or the reward search — they serve
+# cost calibration (bid/ask, volume), capacity defence (volume), integrity (delisting), and EDA
+# attribution (sector). Only A1/A2/A3 feed the pre-registered panel + top-30 selection (PREREG §5).
+universe_pull:
+  selection_buffer_months: 1        # acquire membership+mcap ONE month BEFORE window.start so the
+                                    # first training-window selection (dev, 2005-01) uses strictly-
+                                    # prior (Dec-2004) information — PIT discipline, not a window change
+  membership:                       # A1 — PIT monthly S&P 500 membership 2005-2025
+    refinitiv:
+      field: TR.IndexConstituentRIC                  # >= ~2016 reliable; SDate stepped monthly
+      universe: "0#.SPX"
+      sdate_grid: month_end                          # one request per month-end in the window
+    datastream:
+      list_mnemonic_pattern: "LS&PCOMP{MMYY}"        # 2005-2016 backbone; monthly list codes
+      member_field: NAME                             # static request returns the constituent RICs
+    overlap_year: 2016                               # both sources cover 2016 -> Jaccard cross-check
+  total_return:                     # A2 — daily total returns, full membership union incl. dead ^RICs
+    refinitiv_field: TR.TotalReturn
+    datastream_field: RI
+    include_dead_rics: true                          # leavers/delisted carried, never dropped (R4)
+  market_cap:                       # A3 — for the pre-registered top-30 selection (PREREG §5)
+    refinitiv_field: TR.CompanyMarketCap             # CONFIRMED on entitled feed 2026-06-12 (TR.MarketCap does not resolve)
+    datastream_field: MV                             # Datastream market value
+  delisting:                        # A4 — event metadata; Shumway is the documented FALLBACK only
+    refinitiv_fields: [TR.InstrumentDelistedDate, TR.ExchangeName, TR.TRBCEconomicSector]
+    # CONFIRMED 2026-06-12: ExchangeName + TRBC resolve incl. dead ^RICs; InstrumentDelistedDate
+    # resolves but is often null -> delist date derives from the ^MYY RIC suffix
+    # (security_master.parse_dead_ric) + last-traded date in the TR.TotalReturn history.
+    terminal_return_field: TR.TotalReturn            # last available total return at/around exit
+  hardening:                        # A5 — NOT identification; cost/capacity/integrity/EDA only
+    bid_ask:
+      refinitiv: {bid: TR.BidPrice, ask: TR.AskPrice}   # CONFIRMED on entitled feed 2026-06-12
+      datastream: {bid: PB, ask: PA}                     # VERIFY when DSWS lands (cross-check only)
+      role: cost_calibration                              # realised spread -> cost-grid sanity
+    volume:
+      refinitiv: TR.Volume                               # CONFIRMED 2026-06-12
+      datastream: VO
+      role: capacity_defense                              # ADV -> position-size feasibility, EDA
+    sector:
+      refinitiv_asof: TR.TRBCEconomicSector              # CONFIRMED 2026-06-12 incl. dead RICs
+      role: eda_attribution                               # sector tilts in EDA only
+    index_parity:
+      sp500_tr_index: ".SPXTR"                            # CONFIRMED 2026-06-12 (TRDPRC_1 history)
+      vix_ric: null                                       # .VIX NOT LICENSED on this feed (CBOE
+                                                          # permission absent, probed 2026-06-12);
+                                                          # FRED VIXCLS remains the VIX source
+      role: two_vendor_parity
+
+vendors:
+  yfinance: {auto_adjust: true, purpose: cross_validation}
+  reconciliation_tolerance: {daily_return_abs: 1.0e-4}
+
+macro_fred: [VIXCLS, DGS3MO, DGS10, T10Y2Y]
+factors_french: ["F-F_Research_Data_Factors_daily", "F-F_Momentum_Factor_daily"]   # percent units -> /100
+
+pilot:
+  tickers: [AAPL, MSFT, XOM, C, GE]    # clean x2, dividend-heavy, GFC-stress, index-leaver
+  ge_index_exit: "2018-06-26"
+
+manifest: data/manifest/checksums.txt
+
+platform:                        # medallion data platform (ADR-012); src/data/* reads ONLY from here
+  layers: {raw: data/raw, staged: data/staged, clean: data/clean, gold: data/gold}
+  manifest_jsonl: data/manifest/manifest.jsonl       # rich per-artifact records (provenance, schema, rows)
+  lineage_jsonl: data/manifest/lineage.jsonl         # stage edges: outputs <- inputs (hash-chained)
+  journal_dir: data/manifest/journal                 # resumable pull journals (one jsonl per pull id)
+  quarantine_dir: data/clean/quarantine              # reason-coded rows excluded from clean
+  evidence_dir: docs/evidence
+  runs_dir: runs/data                                # per-stage run sidecars (config hash, wall-clock)
+  calendar: XNYS                                     # exchange-calendars id for alignment/gap classes
+  calendar_start: "2004-01-01"                       # explicit bound: xcals defaults to ~20y lookback,
+                                                     # which post-2026 would clip the 2005 window start
+  chunking: {tickers_per_request: 25, days_per_request: 3700}
+  rate_limit: {requests_per_minute: 30, max_retries: 5, backoff_base_s: 1.0, backoff_cap_s: 60.0,
+               workers: 6}                            # parallel in-flight requests; LAUNCHES stay
+                                                      # globally spaced at requests_per_minute
+                                                      # (thread-safe governor) — limits respected
+  outliers:                                          # stage-6 taxonomy (screens cited in series.screens)
+    reversal_pair_max_lag_days: 21                   # daily adaptation of Ince-Porter monthly reversal
+    extreme_abs_return: 0.20                         # |r| >= 20% one day -> enters context classification
+    real_crash_market_threshold: -0.05               # big down day is REAL if market <= -5% same day
+    stale_run_min_days: 5                            # consecutive identical prices -> illiquidity flag
+    split_signatures: [-0.50, -0.6667]               # unadjusted 2:1 / 3:1 FORWARD-split artifacts (price halves/thirds)
+    forward_split_signatures: [1.00, 2.00, 3.00]     # +100/+200/+300% one-day TR = unadjusted 2:1/3:1/4:1 split in the
+                                                     # total-return series (e.g. JCI 3:1 Oct-2007 = +200.00%); positive
+                                                     # analogue of split_signatures — flag-only, cross-checked vs vendor splits
+    split_tolerance: 0.02
+    ri_consistency_tol: 1.0e-4                       # |RI ratio - (P_t + D_t)/P_{t-1}| flag threshold
+  vendor_authority:                                  # stage-9 per-field authority (clean-layer merge rule)
+    total_return: refinitiv
+    price: refinitiv
+    volume: yfinance
+    fallback: yfinance                               # used when the authority has no entitled coverage
+  quality_weights: {coverage: 0.4, reconciliation: 0.3, integrity: 0.2, freshness: 0.1}

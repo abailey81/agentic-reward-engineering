@@ -1,0 +1,44 @@
+# Eureka-style search loop — anchors: Ma et al. (ICLR 2024); ADR-004 for restarts & dev-split search.
+# PREREGISTRATION.md §4 makes these numbers the DSR trial count. Changing them post-freeze = deviation.
+loop:
+  iterations: 5                # N — Eureka default
+  samples_per_iteration: 16    # K — i.i.d. candidates; >=1 executable w.h.p. (Eureka §exec-filtering)
+  restarts: 3                  # R — Eureka used 5; 3 per ADR-004 compute bound
+  temperature: 1.0             # Eureka sampling regime; verify against App. A before first run
+  keep_best_across_iterations: true
+
+contract:
+  require_component_dict: true   # reward must expose components — enables reflection + forensics chapter
+  numpy_only: true               # candidate code may import numpy ONLY (sandbox enforces)
+  max_abs_reward: 1.0e6
+  archive_dir: data/candidates   # every prompt/response/candidate archived verbatim (rule R6)
+
+arms:                            # matched total budget = iterations*samples*restarts = 240 per ADR-004
+  - llm_distributional           # reflection = prompts/reflection_distributional_v0.md
+  - llm_scalar                   # reflection = prompts/reflection_scalar_v0.md   (H2 ablation)
+  - llm_single_shot              # 240 one-shot samples, no reflection            (H3)
+  - random_search                # H4a: random draws over the six-primitive reward grammar (matched budget)
+  - bayes_opt                    # H4b: GP-EI Bayesian optimisation (Matern-2.5; Snoek et al. 2012) over the same family
+
+baseline_rewards:                # hand-designed canon (citations in src/rewards_baselines.py docstrings)
+  - differential_sharpe          # Moody & Saffell — primary baseline
+  - log_wealth
+  - sharpe_episodic
+  - cvar_penalised_mean
+  - drawdown_penalised
+  - turnover_penalised
+
+reward_family:                   # H4 search space — random_search & bayes_opt draw from THIS space only
+  # (ADR-010; PREREGISTRATION §4a). Six-term linear family implemented in src/reward_family.py; its
+  # vertices recover the hand-designed canon, making H4 a like-for-like search-procedure comparison.
+  # Weights sampled UNIFORM over [low, high]; ranges sized so each term can reach ~ +/-0.02 per step
+  # (parity with daily net-return scale ~0.01). Changing ranges post-freeze = deviation.
+  weights:
+    w_return:   {low: 0.0, high: 2.0}     # * net_return
+    w_log:      {low: 0.0, high: 2.0}     # * log1p(net_return)
+    w_turnover: {low: 0.0, high: 0.02}    # * turnover (one-way, in [0, 1])
+    w_drawdown: {low: 0.0, high: 0.1}     # * drawdown level (in [0, 1])
+    w_cvar:     {low: 0.0, high: 5.0}     # * max(0, -rolling CVaR_alpha)
+    w_vol:      {low: 0.0, high: 2.0}     # * rolling std of net returns
+  cvar_alpha_choices: [0.01, 0.05, 0.10]  # sampled uniformly from this set
+  window_choices: [20, 60]                # rolling window for the CVaR and vol terms

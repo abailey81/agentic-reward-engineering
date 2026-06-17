@@ -1,0 +1,38 @@
+# Portfolio environment — precedent: Sood et al. 2023 (JPM, ICAPS FinPlan).
+state:
+  lookback_T: 60               # log-return lookback per asset (Sood)
+  include_prev_weights: true
+  cash_features: [vol20, vol20_over_vol60, vix]   # cash-row tail per Sood; src/features.py (ADR-007)
+  vol_short_window: 20         # rolling realised-vol windows behind vol20 / vol20_over_vol60
+  vol_long_window: 60          # must be <= lookback_T so no NaN survives past env warmup (features.py guard)
+  vix_scale: 100.0             # VIX level / 100 -> unit-ish scale; stateless transform, leakage-free (ADR-007)
+action:
+  mapping: softmax             # long-only, sum-to-1, no leverage (Sood, Jiang)
+  cash_asset: true             # cash is the LAST weight index
+  logit_clip: 10.0
+returns:
+  convention_accounting: simple   # wealth compounding uses simple returns
+  convention_state: log           # state features use log returns
+  annualisation_days: 252
+  cash_daily_rate: 0.0            # upgrade path: DGS3MO/252 (ADR if changed)
+costs:
+  bps_grid: [0, 5, 10, 20, 50]   # DeMiguel et al. 2009 = 50bps stress column; 0 on cash
+  default_bps: 10
+  turnover_definition: one_way_half_sum   # 0.5 * sum|w_target - w_drifted|
+reward_defaults:
+  differential_sharpe_eta: 0.02   # Moody adaptation rate; sweep {0.01..0.04} pre-freeze only
+  # Baseline-reward parameters (ADR-009). Scales chosen for return-parity: daily net return std ~ 0.01,
+  # so each penalty term's typical per-step magnitude stays within ~1 order of that. Sweep pre-freeze only.
+  cvar_penalised_mean:
+    alpha: 0.05                   # empirical CVaR level (Rockafellar & Uryasev 2000)
+    window: 60                    # rolling window of past net returns; penalty inactive until window full
+    lam: 1.0                      # shortfall weight on max(0, -CVaR)
+  drawdown_penalised:
+    lam: 0.1                      # level penalty: reward_t = r_t - lam * drawdown_t, drawdown in [0, 1]
+  turnover_penalised:
+    lam: 0.001                    # extra shaping beyond realised cost; 10bps-equivalent per unit turnover
+episode:
+  rebalance: daily
+  max_steps: null                 # full window unless set
+universe:
+  n_assets: 30                    # pilot uses data.pilot_tickers (5)
