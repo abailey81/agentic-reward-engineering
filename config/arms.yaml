@@ -1,0 +1,20 @@
+# The NINE arms (FINAL_PLAN B.5; R32 added placebo_shuffled; R108's 7 -> 9 reconciliation added the H4
+# DFO portfolio cma_es + tpe) = 5 LLM feedback arms + 4 search arms. THIS TABLE IS THE AUTHORITATIVE
+# ROSTER — `src.arms.factory.all_arms` reads it dynamically, so add an arm here and the code follows;
+# any count written in prose elsewhere is a convenience that can rot (deep review 2026-07-26, #35/#36).
+# All feedback arms run the SAME fixed agent and the SAME candidate budget (matched compute). The five
+# LLM arms differ ONLY in the feedback block.
+matched_budget: 30                       # mirrors llm.candidate_budget_total; asserted equal across arms
+
+agent_for_all_feedback_arms: sac         # audit A-1: fixed SB3 SAC agent for every feedback arm
+
+arms:
+  distributional: {feedback: full_tail_set}          # scalar + the frozen tail-diagnostic set (the contribution)
+  scalar:         {feedback: scalar_only}             # scalar performance number only
+  placebo:        {feedback: scalar_plus_inert_block} # matched in length/field-count, inert values (info != tokens)
+  scalar_cvar5:   {feedback: scalar_plus_cvar5}       # scalar + ONE downside number (tail-shape != any-downside)
+  placebo_shuffled: {feedback: scalar_plus_shuffled_tail}  # R32: distributional's EXACT structure, values DERANGED (shape vs content)
+  random_search:  {search: code,     llm: false}      # H4a — isolates search quality
+  bayes_opt:      {search: template,  llm: false}      # H4b — GP-EI over a fixed parametric template (Snoek 2012)
+  cma_es:         {search: template,  llm: false}      # H4c — CMA-ES over the SAME template (evolution-strategy; Hansen 2001)
+  tpe:            {search: template,  llm: false}      # H4d — TPE over the SAME template (density-ratio; Bergstra 2011)
