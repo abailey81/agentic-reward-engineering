@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Agentic Reward Engineering for Risk-Sensitive Portfolio Reinforcement Learning"
+abstract: >-
+  A large language model authors the reward-function code for a fixed Stable-Baselines3
+  SAC portfolio agent, and the experiment tests whether feeding its Eureka-style reflection
+  loop a multi-level tail-risk signal (CVaR at four levels, left-tail mass and robust skew)
+  produces better reward code than feeding it a single scalar performance number, at matched
+  compute, against scalar, single-CVaR, placebo and search-baseline controls. The design is
+  pre-registered and cryptographically frozen, and the evaluation uses a survivorship-free,
+  point-in-time LSEG equity panel with a sealed test period. MSc dissertation, UCL Institute
+  of Finance and Technology.
+type: software
+authors:
+  - given-names: Tamer
+    family-names: Atesyakar
+    affiliation: "University College London, Institute of Finance and Technology"
+version: "1.0.0"
+date-released: "2026-09-01"
+license: MIT
+repository-code: "https://github.com/abailey81/agentic-reward-engineering"
+url: "https://github.com/abailey81/agentic-reward-engineering"
+keywords:
+  - reinforcement-learning
+  - reward-design
+  - large-language-models
+  - portfolio-optimization
+  - tail-risk
+  - conditional-value-at-risk
+  - risk-sensitive-reinforcement-learning
+  - pre-registration
