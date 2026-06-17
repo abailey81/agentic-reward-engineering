@@ -1,0 +1,95 @@
+# LLM reward-designer (FINAL_PLAN E, F.8, K). Pin the snapshot; archive every call (replay, not
+# regenerate — audit C-2). The key is read from the environment, NEVER committed.
+
+provider: anthropic                         # CAMPAIGN reward-author = Claude Opus 5 (R102, 2026-07-24; supersedes
+                                            #   ADR-038's Opus 4.8, which supersedes the ADR-035 Gemini pick); the
+                                            #   PROTOTYPE uses Claude Sonnet 4.6 (ADR-038, also native Anthropic SDK /
+                                            #   same ANTHROPIC_API_KEY).
+model_snapshot: "claude-opus-5"             # R102: campaign reward-author = Claude Opus 5 (dateless id IS a pinned
+                                            #   snapshot, not an evergreen pointer — vendor doc, same rule as ADR-016).
+                                            #   Same price as Opus 4.8 ($5/$25 per MTok) -> budget unchanged. Opus 4.8
+                                            #   is now vendor-LEGACY; it survives as an M2 survey datapoint.
+api_key_env: ANTHROPIC_API_KEY              # read from the gitignored .env; NEVER committed
+temperature: 1.0                            # Eureka diversity (ADR-016): K candidates/gen share ONE prompt -> temp MUST
+                                            #   be > 0 (0 collapses the within-gen search; per-provider diversity per ADR-038:
+                                            #   prototype Sonnet 4.6 uses temp=1.0, campaign Opus 5 uses prompt-variation
+                                            #   — the Opus lane REJECTS temperature, so client.py drops it, R85/R102)
+top_p: 1.0
+thinking: {type: disabled}                  # R106 (2026-07-27) UNIFORM REASONING-OFF, ratified 2026-07-26 (supervisor
+                                            #   sign-off, pack item 8). The confirmatory author is now PINNED off rather
+                                            #   than off-by-vendor-default. VERIFIED ACCEPTED live on claude-opus-5
+                                            #   (also haiku-4.5 / sonnet-5) before the parameter was wired, because an
+                                            #   unaccepted field here would 400 the confirmatory path.
+max_tokens: 16384                            # R106 uniform cap (2026-07-27), raised 8192 -> 16384 because the
+                                            #   confirmatory author measured 78% utilisation at 8192 (6412 tokens of
+                                            #   8192 on a 10-call gate) - the marginal-by-construction band. R102's
+                                            #   4096 -> 8192 is superseded; that value was ALSO
+                                            #   R106 as the uniform cap shared with all 10 legs (never lowered).
+                                            #   NOTE: R102's STATED REASON WAS FALSE and is corrected here (evidence ledger
+                                            #   row 123): it claimed "Opus 5 runs ADAPTIVE THINKING BY DEFAULT", but the
+                                            #   live test showed Opus 5 emits NO thinking block when the field is
+                                            #   omitted, so the cap was never protecting against thinking. The bump is
+                                            #   kept on its own merits (headroom + matched caps), not on that premise.
+                                            #   Raising the CAP costs nothing per se (billing is on generated tokens).
+
+# Matched-compute budget (the property that licenses the comparative claim). Same for ALL arms.
+candidate_budget_total: 30                  # total reward candidates per arm (set via scoping tree)
+# NOTE: NON-AUTHORITATIVE MIRRORS (2026-07-26 review). The EXECUTED search width comes from
+# config/campaign.yaml (`generations: 6`, `candidates_per_arm: 30`); the campaign computes
+# candidates-per-generation itself in src/orchestration/parallel.py:996 (`candidates // generations`
+# = 5) and never reads this file — `config/llm.yaml` has exactly ONE consumer repo-wide,
+# scripts/smoke_qwen.py. Editing the two keys below therefore changes NOTHING about the campaign.
+# `candidates_per_generation` is additionally a DEAD key name: src/llm/loop.py reads
+# `candidates_per_gen` (note the abbreviation) and defaults it to 1, so nothing anywhere reads the
+# spelling below. Change the search width in config/campaign.yaml, not here.
+generations: 6                              # MIRROR of campaign.yaml `generations` (H3 single-shot uses 1)
+candidates_per_generation: 5                # MIRROR/DEAD KEY — = candidates_per_arm / generations
+
+# N3 contamination control (ADR-033): an open-weights, different-cutoff model whose H2 ORDERING is
+# replicated on a separate corpus. ADR-033 names Llama-4 (official Aug-2024 cutoff, commit-pinned);
+# DeepSeek-V3-0324 (deepseek-ai/DeepSeek-V3-0324, ADR-016) is the recorded fallback. Pin the EXACT HF
+# commit at use time — do NOT fabricate a revision here (the no-fabrication rule). Secondary arm, not
+# on the primary Pass-B path.
+#
+# SECOND-MODEL DECIDED (amendment R71, 2026-06-29; model PINNED 2026-07-02) — a multi-model SECONDARY
+# robustness panel, NOT co-primary. The single Claude family (Opus 4.8) train-to-convergence run is the
+# CONFIRMATORY headline (the `provider`/`model_snapshot`/`api_key_env` block above is that path and stays
+# BYTE-UNTOUCHED); a different-family OPEN-WEIGHTS designer is added as a pre-registered SECONDARY,
+# REPORT-ONLY panel (headline arms only, reduced seeds) that makes "LLMs" genuine + runs the N3
+# `cross_model_disagreement` contamination cross-check. It is NEVER part of the confirmatory family.
+#
+# PINNED MODEL (decision 2026-07-01, supersedes the Qwen2.5-Coder recommendation): the Qwen3-Coder family
+# — strong code authorship, Apache-2.0 open weights, non-Anthropic vendor + different training cutoff —
+# served via OPENROUTER (OpenAI-compatible chat-completions at https://openrouter.ai/api/v1; slug below).
+#   * key env  = OPENROUTER_API_KEY (gitignored .env; NEVER committed).
+#   * REPRODUCIBILITY ANCHOR: OpenRouter routes a slug to a concrete snapshot — the EXACT model/version
+#     string the response reports (`response.model`, archived as ProvenanceRecord.served_model) MUST be
+#     recorded in the archive at the FIRST live call and quoted in the write-up.
+#   * smoke/activation: add OPENROUTER_API_KEY=... to .env, then `python scripts/smoke_qwen.py`.
+# ACTIVATION IS KEY- + COMPUTE-GATED + EXPLICIT: until the secondary panel is actually RUN, the MAIN
+# single-model campaign path keeps degrading `cross_model_disagreement` to {"status": "no_data"} (honest
+# "secondary panel not yet run" — it gates on second-model DATA, not on this pin), NOT a silent skip; the
+# secondary panel is a SEPARATE run. Until run, the write-up says "the single Claude family (Sonnet ->
+# Opus) for the confirmatory headline; the second-family panel is a pre-registered secondary run."
+open_weights_check_model: "qwen/qwen3-coder"  # R71 SECONDARY panel (Qwen3-Coder-480B-A35B, OPEN-WEIGHTS).
+                                              #   2026-07-09: reverted DashScope -> OpenRouter. We cannot obtain
+                                              #   the Alibaba DashScope key; OpenRouter serves the SAME open-weights
+                                              #   model and the transport ARCHIVES the served snapshot
+                                              #   (response.model -> ProvenanceRecord.served_model), so it remains a
+                                              #   valid reproducibility anchor — the "anchor" is the OPEN-WEIGHTS
+                                              #   model (downloadable forever), not the host. A ":free" tier for this
+                                              #   slug exists (since 2026-02); ":exacto" pins best tool-calling.
+                                              #   SAME-LEVEL-OR-BETTER swaps if preferred (all open-weights, distinct
+                                              #   from Opus, via OpenRouter): Kimi K2.6 (moonshotai/kimi-k2.6, MIT —
+                                              #   now stronger at coding) or GLM-5.1 (z-ai/glm-5.1, MIT). A model swap
+                                              #   needs a one-line prose update (the 2nd-model name), nothing more.
+                                              #   VERIFIED LIVE 2026-07-10 (scripts/smoke_qwen.py, the project key):
+                                              #   served_model='qwen/qwen3-coder-480b-a35b-07-25' <- the R71
+                                              #   reproducibility-anchor snapshot; response 'OK', 32 tokens.
+open_weights_provider: openrouter             # OpenAI-compatible transport (src/llm/client.py registry);
+                                              #   base URL = https://openrouter.ai/api/v1 (registry default)
+open_weights_api_key_env: OPENROUTER_API_KEY  # read from the gitignored .env; NEVER committed. OpenRouter key =
+                                              #   simple global signup + card (or the free tier) — no Alibaba account.
+
+archive: true                               # store rendered prompt + raw response + parsed reward per call
+archive_dir: outputs/runs                   # keyed by run id (see src/io/results.py)

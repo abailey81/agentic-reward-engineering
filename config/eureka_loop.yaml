@@ -1,0 +1,97 @@
+# Eureka-style search loop — anchors: Ma et al. (ICLR 2024); ADR-004 for restarts & dev-split search.
+# NB: the loop numbers below are the NOT-LOADED v0 blueprint (see the arms: banner); the LIVE
+# budget is config/campaign.yaml (K=5 x 6 generations = 30) - audit 2026-07-22 comment fix.
+loop:
+  iterations: 5                # N — Eureka default
+  samples_per_iteration: 16    # K — i.i.d. candidates; >=1 executable w.h.p. (Eureka §exec-filtering)
+  restarts: 3                  # R — Eureka used 5; 3 per ADR-004 compute bound
+  temperature: 1.0             # Eureka sampling regime; verify against App. A before first run
+  keep_best_across_iterations: true
+
+contract:
+  require_component_dict: true   # reward must expose components — enables reflection + forensics chapter
+  numpy_only: true               # candidate code may import numpy ONLY (sandbox enforces)
+  max_abs_reward: 1.0e6
+  archive_dir: data/candidates   # every prompt/response/candidate archived verbatim (rule R6)
+
+arms:                            # legacy blueprint budget = iterations*samples*restarts = 240 (ADR-004).
+  # NB: this eureka_loop.yaml is the documentary blueprint and is NOT loaded by the live run. The
+  # LIVE matched budget is set in config/{prototype,campaign}.yaml (40 prototype / 30 campaign), and
+  # the live arm set (config/arms.yaml) uses the names distributional/scalar/placebo/scalar_cvar5/
+  # random_search/bayes_opt. Numbers below are the historical blueprint, retained for provenance.
+  - llm_distributional           # reflection = prompts/reflection.txt + distributional {ARM_BLOCK} (schema.build_block)
+  - llm_scalar                   # reflection = prompts/reflection.txt + scalar {ARM_BLOCK} (schema.build_block)  (H2 ablation)
+  - llm_single_shot              # one-shot samples at the matched budget, no reflection   (H3)
+  - random_search                # H4a: random draws over the six-primitive reward grammar (matched budget)
+  - bayes_opt                    # H4b: GP-EI Bayesian optimisation (Matern-2.5; Snoek et al. 2012) over the same family
+
+baseline_rewards:                # hand-designed canon (citations in src/baselines/rewards.py docstrings)
+  # The full 11-name hand-reward canon (PREREGISTRATION §9; R97 added differential_downside_ratio; the
+  # 2026-07-26 expansion added volatility_scaled_return). Every name MUST be a real key in
+  # src/baselines/rewards.py::REWARD_CANON (the branch resolves via getattr(rewards, name)); an earlier
+  # list carried 5/6 STALE names that would AttributeError (log_wealth/sharpe_episodic/
+  # cvar_penalised_mean/drawdown_penalised/turnover_penalised — fixed to the real names below;
+  # sharpe_episodic DROPPED, it has no REWARD_CANON function). *** SINCE THE 2026-07-26 H1 CANON
+  # EXPANSION (4 -> 11) THIS LIST *IS* THE REGISTERED H1/N6 COMPARATOR FAMILY *** - it is no longer a
+  # "secondary panel" distinct from a 4-name H1 subset: config/preregistration.yaml::h1_baselines ==
+  # config/campaign.yaml::h1_baselines == this list == REWARD_CANON.keys(). The first two are bound by
+  # scripts/freeze.py::assert_h1_baselines_match; this list is bound to REWARD_CANON in both directions
+  # by tests/test_baselines.py::test_secondary_panel_config_matches_reward_canon.
+  - raw_return                   # myopic bare portfolio return
+  - return_minus_variance        # mean-variance penalty
+  - return_minus_cvar            # tail-risk (CVaR) penalty   (was: cvar_penalised_mean)
+  - differential_sharpe          # Moody & Saffell online incremental Sharpe — primary baseline
+  - differential_downside_ratio  # Moody & Saffell 2001 eqs.(21),(23),(24) — the DOWNSIDE companion (R97)
+  - mean_variance_utility        # Markowitz quadratic utility
+  - return_minus_drawdown        # running-drawdown penalty   (was: drawdown_penalised)
+  - return_minus_downside        # Sortino downside semi-deviation penalty
+  - return_minus_turnover        # transaction-cost / turnover penalty  (was: turnover_penalised)
+  - log_growth                   # Kelly growth-optimal log return  (was: log_wealth)
+  - volatility_scaled_return     # volatility-TARGETED return (Zhang-Zohren-Roberts 2020) — the RL-trading-provenance member (2026-07-26 canon expansion; the one research-recommended addition)
+
+reward_family:                   # H4 SHARED six-primitive space (ADR-010; PREREGISTRATION §4a).
+  # Six-term linear family implemented in src/baselines/reward_family.py. Exactly which dimensions
+  # each H4 arm searches over THIS family's six primitives (return, log, turnover, drawdown, cvar, vol):
+  #   - bayes_opt (H4b):     GP-EI tunes the six continuous WEIGHTS; the discrete dims (cvar_alpha,
+  #                          window) are FIXED at (0.05, 20) because the GP box is continuous-only.
+  #   - random_search (H4a): draws the six WEIGHTS uniformly from a coarse grid over the SAME ranges,
+  #                          at the SAME fixed (cvar_alpha=0.05, window=20) — a procedure-only control
+  #                          at comparable expressive power to H4b (src/search/random_search.py).
+  # NOTE: the family's vertices recover the hand-designed canon, so H4b is a like-for-like comparison
+  # of FREE-FORM LLM code against the BEST member of this fixed parametric family. This does NOT make
+  # the LLM-vs-search comparison like-for-like in SEARCH SPACE: the LLM authors free-form code (a
+  # strictly richer space), so a positive H4 reflects open-ended-language + procedure, not procedure
+  # alone. Weights sampled UNIFORM over [low, high]; ranges sized so each
+  # term can reach ~ +/-0.02 per step (parity with daily net-return scale ~0.01). Changing ranges
+  # post-freeze = deviation.
+  #
+  # NOTE: TURNOVER CONVENTION — CORRECTED 2026-07-26 (deep review, finding #52). This comment
+  # previously read "(one-way, in [0, 1])". That is NOT what the code computes:
+  # src/baselines/reward_family.py uses the TWO-WAY sum|w - w_prev|, which is MEASURED at 2.0 for a
+  # fully disjoint rebalance, i.e. range [0, 2]. Note the sibling H1 member
+  # rewards.py::return_minus_turnover DOES use the one-way 0.5*sum|.| (measured 1.0 on the same
+  # input, Garleanu-Pedersen convention) — the two families genuinely differ, which is exactly why
+  # the stale comment was so easy to believe.
+  # CONSEQUENCE for the sizing rationale above: at w_turnover = 0.02 the term reaches 0.02 x 2.0 =
+  # 0.04 per step, TWICE the ~+/-0.02 figure quoted there (one-way would give exactly 0.02). Every
+  # other term does meet it.
+  #
+  # RATIFIED 2026-07-26 (deep review #52). The range
+  # STAYS at [0, 0.02]; the RATIONALE is corrected instead. Reasoning: the "~+/-0.02 per step" line
+  # is a SIZING HEURISTIC (make each primitive able to matter at the daily-return scale ~0.01), not
+  # a constraint the design depends on. w_turnover is a weight the optimiser TUNES over the whole
+  # range, so a 2x wider reach costs nothing and excludes nothing — whereas halving `high` to 0.01
+  # would NARROW a registered search space, potentially excluding a genuinely better member, to
+  # satisfy a sentence. Changing the science to match the prose is the wrong direction; the prose is
+  # what was inaccurate. So: the turnover primitive can reach ~+/-0.04 per step BY DESIGN, twice the
+  # other five, which is a deliberate allowance for the one term whose natural scale is a [0,2] L1
+  # distance rather than a daily return. Nothing about H4's identification or matched budget changes.
+  weights:
+    w_return:   {low: 0.0, high: 2.0}     # * net_return
+    w_log:      {low: 0.0, high: 2.0}     # * log1p(net_return)
+    w_turnover: {low: 0.0, high: 0.02}    # * turnover — TWO-WAY sum|w - w_prev|, in [0, 2] (see note below)
+    w_drawdown: {low: 0.0, high: 0.1}     # * drawdown level (in [0, 1])
+    w_cvar:     {low: 0.0, high: 5.0}     # * max(0, -rolling CVaR_alpha)
+    w_vol:      {low: 0.0, high: 2.0}     # * rolling std of net returns
+  cvar_alpha: 0.05                        # FIXED discrete dim for BOTH H4 arms (continuous BO box)
+  window: 20                              # FIXED rolling window for the CVaR / vol terms (both H4 arms)
