@@ -1,0 +1,45 @@
+# Data (FINAL_PLAN D, B.2; audit B-2, C-3). Splits byte-match PREREGISTRATION.md §7.
+period: {start: 2005-01-01, end: 2026-06-30}   # 21.5 years — extended to the SETTLED 2026-06-30 cutoff (ADR-051); NOT a scoping lever
+survivorship_free: true
+delisting_returns: retain
+
+gold:
+  suffix: univ5                                 # ACTIVE headline panel selector (C1). This is the
+                                                # PRIMARY source of the gold suffix read by
+                                                # src/data/loaders.py::gold_suffix(); the LLM_RP_GOLD_SUFFIX
+                                                # env var is an EXPLICIT override only (sensitivity band).
+                                                # Because config/data.yaml is bound into the freeze hash
+                                                # (scripts/freeze.py), the panel IDENTITY now enters the
+                                                # frozen design hash — a new-suffix rebuild MUST set this
+                                                # key (and re-freeze) rather than silently swap the panel.
+
+splits:
+  # SPLIT C (ADR-044 RATIFIED; executed 2026-07-02 with the univ5 rebuild, ADR-051):
+  train: {start: 2005-01-01, end: 2016-12-31}   # agent learns + feedback MEASURED here (audit B-2)
+  val:   {start: 2017-01-01, end: 2019-12-31}   # selection (held-out Deflated Sharpe)
+  test:  {start: 2020-01-01, end: 2026-06-30}   # UNTOUCHED until final inference (settled cutoff, ADR-051)
+embargo_days: 21                                # Lopez de Prado purge+embargo FLOOR (serial-correlation margin).
+                                                # Effective inter-split purge = max(embargo_days, lookback_days)
+                                                # = max(21, 60) = 60 sessions (R18): the purge must cover the
+                                                # 60-day feature lookback so no obs window crosses a split.
+                                                #   Reconciled 10->21 (2026-06-19 audit): matches inference.yaml.
+                                                #   SPLIT C (ADR-044/051): the materialized univ5 splits parquet still
+                                                #   records the PRE-Split-C dev boundary (2015-02-03) — provably INERT
+                                                #   (< the Split-C abut; pinned by test_embargo_splits) — and the
+                                                #   EXECUTED val start applies the lookback purge: 2017-03-30
+                                                #   (= first post-2016-12-31 session + 60).
+
+vendors: [primary, secondary]                   # two-vendor reconciliation (stage 11)
+sources:
+  prices_returns: Refinitiv_LSEG_RDP            # ACTUAL vendor (ADR-013/019–022): survivorship-free PIT panel
+                                                #   data/gold/returns_panel_univ5.parquet (the gold.suffix above;
+                                                #   Split-C headline, R73/ADR-051 — univ3 was the pre-Split-C
+                                                #   headline), built by data_pipeline/, loaded via
+                                                #   src/data/loaders.py. (CRSP/WRDS was the originally-
+                                                #   planned source; see ../01_literature/DATASETS.md.)
+  vix: FRED_VIXCLS                              # CBOE .VIX not licensed → FRED VIXCLS (cash_features.vix)
+  risk_factors: kenneth_french_data_library     # factor attribution
+  macro_regime: FRED_ALFRED                      # point-in-time vintages (no revision look-ahead)
+
+freeze: {checksum: sha256}
+licensing: redistribution_prohibited            # ship checksums + pipeline + SYNTHETIC panel, NOT the data (audit C-3)

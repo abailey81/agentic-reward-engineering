@@ -1,0 +1,37 @@
+# Portfolio MDP (FINAL_PLAN B.2). Code reads this; never hardcode parameters.
+universe:
+  n_assets: 30
+  selection: top_market_cap_point_in_time   # top-30 by PIT market cap, per date
+  include_cash: true
+
+state:
+  lookback_days: 60                # per-asset daily-return window
+  realized_vol_windows: [20, 60]
+  include_vix: true                # LAGGED so it is knowable at t (tested). Source: FRED VIXCLS
+                                   #   (CBOE .VIX not licensed) — cash_features.vix in the gold panel.
+  include_prev_weights: true       # for turnover / cost
+  cash_daily_rate: 0.0             # per-session cash return (R20). 0.0 = legacy (cash grows at 1.0). A
+                                   #   non-zero CONSTANT lets cash earn a money-market return, but the
+                                   #   3-mo T-bill ranged 0–5.6%/yr over 2005–2025, so a per-session DGS3MO
+                                   #   SERIES is the correct refinement (a constant overpays cash in the
+                                   #   2008/2020 ZIRP stress where the tail-aware arm flees to cash). Held
+                                   #   at 0.0 pending the series wiring; env now PRICES cash when set.
+  dtype: float32
+
+action:
+  type: simplex                    # long-only weights over assets + cash, sum to 1
+  projection: softmax              # FREEZE softmax XOR l1_normalize_of_clipped in Phase 1 (audit C-8)
+  bound: 10.0                      # action = pre-softmax logits in [-bound, bound]; SAC/TQC require a FINITE
+                                   #   action space. bound=10 -> softmax can still reach ~full concentration.
+                                   #   FREEZE in Phase 1 (ADR-027).
+
+costs:
+  grid_bps: [0, 5, 10, 25, 50]
+  headline_bps: 10
+  model: proportional_turnover     # cost = c * turnover, turnover = 0.5 * L1(w_t - w_tilde) where w_tilde =
+                                   #   w_{t-1} DRIFTED by realized returns (half-L1-drifted; see
+                                   #   docs/environment_spec_v1.md); cash grows at 1 + state.cash_daily_rate.
+                                   #   See Almgren-Chriss for the proportional-cost limitation note.
+
+horizon: walk_forward              # terminate at the split boundary
+timing: return_realized_after_action   # r_t realized AFTER a_t (audit C-5; tested)
