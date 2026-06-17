@@ -1,0 +1,70 @@
+# Inference machinery — PREREGISTRATION.md §6–7. Formulas implemented in src/stats_inference.py.
+# Amendment E1 (2026-07-10, supervisor-approved; PREREGISTRATION §6/§12): headline per-arm WINNER seeds
+# = the assurance-tier ladder (flat [0..567]): 30 core / 100 sigma-precision / 189 point-estimate power /
+# 279 (80%) / 340 (90%) / 403 (95% target) / 568 (99%); exogenous stopping tier. Search budget untouched
+# (seeds-on-winners, ADR-023); the ablation seed set is unchanged. This block is a documentation
+# MIRROR — the executed set lives in config/campaign.yaml and both resolve via src.utils.seeds.
+seeds: {headline: {mode: tiered, tiers: [30, 100, 189, 279, 340, 403, 568]}, ablation: [0,1,2]}
+
+splits:
+  # SPLIT C (ADR-044 RATIFIED, executed 2026-07-02 with the ADR-051 univ5 rebuild): train grows to 12y
+  # (2 more cycles incl. 2015-16), val = 2017-2019 (3y selection window), test = the sealed 2020-2026H1
+  # span (post-COVID-crash recovery + elevated-vol regime + 2022 inflation-hikes + 2023-25 AI-rally +
+  # settled H1-2026 — the modern regime set). NB the Feb-Mar 2020 COVID crash itself falls INSIDE the
+  # val->test purge, so the SCORED sealed-test outcomes begin post-crash (~2020-03-30) — see CH4 §4.2.
+  development: {train: ["2005-01-01","2016-12-31"], validation: ["2017-01-01","2019-12-31"]}  # search lives here ONLY
+  evaluation:  {scheme: single_sealed_split, span: ["2020-01-01","2026-06-30"],   # frozen winners only.
+                deferred_walk_forward: {train_years: 5, test_years: 1, step_years: 1}}
+  # R43 (2026-06-26): the EXECUTED headline is ONE contiguous sealed split (run_campaign.py);
+  # walk-forward folds are DEFERRED future work. The frozen `scheme` now MATCHES the code + PREREGISTRATION §7
+  # (no walk_forward-vs-single-split contradiction). Walk-forward params retained under deferred_walk_forward.
+  embargo_trading_days: 21          # Lopez de Prado 2018 — FLOOR only; effective inter-split purge is
+                                    # max(embargo, lookback)=max(21,60)=60 sessions (R18: the purge must
+                                    # cover the 60-day feature lookback so no obs window crosses a split).
+  cpcv: {n_blocks: 16, purge: true}
+  # EXPECTED resolved window tuples (M1 guard). resolve_windows() maps the frozen calendar splits onto
+  # the panel's date axis via np.searchsorted with clamps; a NEW panel whose calendar shifts could
+  # silently move these integer [start,end) windows through those clamps. Before the headline run we
+  # ASSERT the resolved (train,val,test) tuples equal the recorded set for the ACTIVE gold suffix and
+  # FAIL LOUD on mismatch (run_campaign._assert_expected_windows). Keyed by suffix so a rebuild records
+  # the new panel's windows here (and re-freezes) rather than letting a clamp move them unnoticed.
+  # These are DERIVED integers (not split/date values); @ lookback=60, embargo=21 (purge=60).
+  # univ3 = the FROZEN pre-Split-C reference (dev splits 2005-14/15-17/18-25);
+  # univ5 = the ACTIVE Split-C panel (ADR-044/051: 2005-16/17-19/20-2026H1; 5,406 sessions x 963 names;
+  #         byte-diff vs univ3 verified 2026-07-02: 0 changed overlap cells, +123 rows, +10 cols).
+  expected_windows:
+    univ3: {train: [60, 2517], val: [2577, 3272], test: [3332, 5283]}
+    univ5: {train: [60, 3021], val: [3081, 3775], test: [3835, 5406]}
+
+fitness:                            # F = DSR_val - lambda_cvar * |CVaR_alpha(val)|; at lambda_cvar=0 -> DSR-only
+  alpha: 0.05                       # CVaR level of the (inert at lambda=0) penalty; read by
+                                    #   src/selection/fitness.py only when lam != 0.
+  lambda_cvar: 0.0                  # FIXED AT 0 BY DESIGN (RATIFIED 2026-07-01; mirrors preregistration.yaml
+                                    #   fitness.lambda_cvar, freeze-gate check #7): the selector is DELIBERATELY
+                                    #   tail-blind — a tail-aware selector would confound the H2 feedback channel
+                                    #   (selection-FOR-the-tail masquerading as feedback-driven tail improvement).
+                                    #   NOT a calibration target; tuning lambda breaks identification (FIX-class,
+                                    #   scripts/determine_design.py). The legacy lambda_grid / lambda_frozen /
+                                    #   calibration_fold apparatus was DELETED 2026-07-02, executing the
+                                    #   preregistration.yaml §5 instruction ("DELETED at the Phase-1 freeze").
+
+dsr:   {unannualised_inputs: true, trial_count_rule: per_arm_candidates}        # Bailey & Lopez de Prado 2014:
+# DSR trial count = each arm-winner is the max over its OWN arm's candidates (winner_dsr uses len(arm_records),
+# = prototype.yaml n_trials=40; review M1/#32). Cross-arm multiplicity is handled SEPARATELY by the m=6 testing
+# family (R13) — counting all_candidates_all_arms here would double-correct. (Was mislabelled; nothing reads it.)
+pbo:   {n_blocks: 16}                                                           # CSCV
+# Re-centred empirical stationary block bootstrap (NOT studentized: the bootstrap SE cancels in the
+# p-value — verified, Rank 11 2026-06-19). Params mirror the code defaults in
+# src/inference/bootstrap.py::sharpe_difference_test / cvar_difference_test (the code is the source of
+# truth for these pure stats fns; this block documents what it runs).
+sharpe_test: {method: recentred_stationary_bootstrap, bootstrap: stationary, block_restart_p: 0.1, n_boot: 2000}
+multiplicity: {method: benjamini_hochberg, q: 0.05}
+
+distributional_feedback:
+  alpha_grid: [0.01, 0.05, 0.10, 0.25]    # CVaR profile levels (Kusuoka discretisation — docs/ schema)
+  sort_quantiles_before_stats: true        # IQN crossing fix (NeurIPS 2020); the pre-audit `crossing_rate`
+                                           #   metric was NOT merged (B-line, archive/pre_merge_repo_B/; ADR-022)
+
+regimes:
+  hmm: {n_states: 3, covariance_type: full, em_restarts: 10, fit_scope: train_only,
+        probabilities: filtered, shift_days: 1}
