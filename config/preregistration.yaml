@@ -1,0 +1,582 @@
+# Machine-readable mirror of PREREGISTRATION.md. FROZEN at end of Phase 1; scripts/freeze.py hashes
+# it into docs/DECISION_LOG.md and asserts it agrees with the prose record. Changes after freeze
+# require a dated amendment entry.
+frozen: true                       # R115 UNFREEZE (2026-07-28, Tamer): v2.0 (4f90ecc4, frozen 07-28T00:05Z, tag prereg-v2.0) LIFTED **PRE-DATA** to register the winner-eligibility execution floor. Condition met exactly as ADR-059: the first execution attempt (RUN 1) was invalidated by a driver defect and is DISCARDED WHOLESALE, RUN 2 held ZERO records, and NO arm contrast of any kind had ever been computed (only H1 baselines had scored records). The sealed 2020-2026 test leg is untouched. All v2.0 records preserved as history: tag prereg-v2.0, docs/prereg-v2.0.sha256. (Chain: v1.0 ce5db62c frozen 07-18 -> lifted 07-20 ADR-059/R78; 07-22 ccf2e76f R93 lifted same-day R94; v2.0 frozen 07-28T00:05Z -> lifted 07-28 R115/ADR-062.)
+freeze_hash: 3ca6f01ab7724d47bd5d01bc9e73b4d3150c049e1048dd86a864b400a230432f                   # v2.0 hash was 4f90ecc47cc6a779d63b74fdaa9667f967473365863fb615401694131ca136fd (preserved in docs/prereg-v2.0.sha256 + tag prereg-v2.0); re-stamped by the v2.1 freeze
+phase0_smoke_passed_log_id: "DECISION_LOG.md#PHASE-0 (GREEN 2026-06-17)"   # precondition MET (P2; CPU m≈18.9/25.9)
+
+hypotheses: [H1, H2, H3, H4]          # H2 headline; secondary = SAC-vs-TQC critic
+contribution_axis: feedback_channel   # audit A-1: agent fixed (SAC), feedback varies
+
+arms: [distributional, scalar, placebo, scalar_cvar5, placebo_shuffled, random_search, bayes_opt, cma_es, tpe]   # 9 arms (2026-07-26: +cma_es/tpe = the H4 optimiser portfolio, N4 confirmatory); placebo_shuffled = the R32 structure-vs-content control (V1 reconcile 2026-06-26: was silently missing from the frozen roster while the campaign ran 7). DISJOINT from the m=6 testing family.
+matched_budget: 30
+# Amendment E1 (2026-07-10, supervisor-approved; PREREGISTRATION §6/§12 + amendment record): per-arm
+# WINNER seed count is the ASSURANCE-TIER LADDER (mode: tiered), resolving to the flat set [0..567].
+# SEARCH budget untouched (1 seed per candidate during search; only the winners re-run at these seeds —
+# the seeds-on-winners lever, ADR-023). Cumulative, order-only tiers (CRN preserved, each a COMPLETE
+# study; truncation falls back to the largest COMPLETED rung): 30 core / 100 sigma-precision /
+# 189 point-estimate power / 279 (80%) / 340 (90%) / 403 (95%, primary target) / 568 (99%). Stopping
+# tier is EXOGENOUS (measured throughput vs deadline, never results) -> the single look is preserved.
+seeds: {mode: tiered, tiers: [30, 100, 189, 279, 340, 403, 568]}
+# R111 (2026-07-26): the H1 hand-reward CANON climbs the ladder with every other test unit, so N6's
+# effective n EQUALS the achieved rung. Registered explicitly because R108 promoted N6 from
+# report-only to CONFIRMATORY, and the floor-30 ruling it would otherwise inherit was taken while it
+# was still report-only. Load-bearing fact: each IUT leg tests on the seed INTERSECTION of winner and
+# baseline (scripts/analyze_campaign.py ~5796-5806), so canon depth CAPS N6 — pinning it at 30 would
+# leave a confirmatory node 4.35x less sensitive than its siblings (MDE 0.1675 vs 0.0385 annualised
+# Sharpe). Already costed: src/cluster/lanes._TEST_UNITS_PER_RUNG = 71 = 9 core + 50 leg + 11 canon + 1
+# H3, and total_trainings(568) = 42,128 matches this ladder exactly.
+canon_seed_depth: climbs_with_ladder    # NOT pinned to the 30-seed floor; n(N6) == achieved rung
+
+tail_diagnostic_set:                  # measured on TRAINING returns; empirical body + EVT tails
+  cvar_levels: [0.25, 0.10, 0.05, 0.01]   # cvar_01 retained but FLAGGED high-variance (B-7)
+  evt_levels:  [0.05, 0.01]               # GPD fit for the extremes
+  extras: [left_tail_mass, robust_skew]
+  reliability_diagnostic: dropped_from_headline   # crossing-rate kept only for optional neural instrument
+  moors_kurtosis: excluded
+measurement_split: train              # audit B-2
+estimator: {body: empirical, tails: gpd_evt}      # audit B-1
+
+# R114 (2026-07-27): the RENDERED PRECISION of the fed block is a REGISTERED DESIGN PARAMETER, not an
+# implementation detail. The designer never sees a float — it sees a STRING — so quantization is part
+# of the stimulus, and an unregistered default silently decides how much of the manipulated variable
+# survives to the model. Bound into the canonical hash via src/feedback/schema.py (#97).
+fed_rendering:
+  scalar_header_decimals: 6      # "Your previous reward scored: {:.6f} (validation Deflated Sharpe)"
+  tail_line_decimals: 4          # every fed tail scalar, signed fixed-point
+  notation: fixed_point_never_scientific   # scientific notation is a known LLM numeracy hazard
+  legible_resolution_parity: required      # the legible re-rendering must resolve EXACTLY as finely as
+                                           # the raw one, so the SQ3b ablation varies ENCODING only
+  bound_by: src/feedback/schema.py         # hash-bound in freeze.py _BOUND_TREATMENT since 2026-07-27
+  rationale: "Set from MEASUREMENT, not taste. HEADER: at the previous .2f the scalar arm's ENTIRE
+    feedback content collapsed — 229/240 archived val_fitness values (95.4%) rendered literally '0.00'
+    and 240 candidates produced just 4 DISTINCT strings (median fitness 0.000243, ~5x below the .2f
+    quantization step); .4f still zeroes 24.2%, .6f zeroes 0.8% and yields 94 distinct strings. Since
+    the scalar arm is the PRIMARY H2 COMPARATOR, .2f would have contrasted the tail vector against a
+    near-CONSTANT rather than against a scalar performance number — a construct-validity failure, and
+    one that makes H2 easier to 'win' for the wrong reason. TAIL LINES: amendment R76 measured the
+    PAIRED candidate-to-candidate diff-SE of a fed CVaR-5% at 1e-4 (sibling-close books) to 8e-4
+    (structurally different books); the old .3f quantization step of 1e-3 was LARGER THAN THAT ENTIRE
+    RANGE, rendering 90.1%/70.1%/20.2% of pairs separated by 1e-4/3e-4/8e-4 as the SAME STRING, versus
+    0.0% at .4f. That also repairs the registered A2-vs-A5 adjudication, whose A5 branch presumes the
+    designer SEES a small delta and defensibly discounts it — at .3f there was frequently no delta on
+    the page at all, a third state the ladder does not name. .5f is REJECTED as false precision: the
+    MARGINAL sampling SE of a fed CVaR-5% is ~3.3e-3, and 1e-5 would also break legible parity because
+    the legible arm renders integer basis points (1 bps = 1e-4). PARITY: before the fix the legible
+    re-rendering resolved COARSER than raw on two of six fields (robust_skew +.2f collapsed 277
+    distinct values to 14; left_tail_mass .1f%% collapsed 54 to 18), so a measured 'legibility effect'
+    would have been partly INFORMATION LOSS — biased toward a spurious null. Now exact parity on all
+    six. IDENTIFICATION UNAFFECTED: the renderer is common-mode across every arm, so arms still vary
+    ONLY the feedback CONTENT; what changes is that the scalar comparator is no longer crippled, which
+    makes the H2 contrast a fairer and HARDER test. Pre-data and pre-freeze."
+
+fitness:
+  metric: validation_deflated_sharpe  # reward-independent (audit B-3)
+  lambda_cvar: 0.0                     # optional -lambda * validation CVaR
+  selection_split: val
+  # R115 (2026-07-28) — WINNER-ELIGIBILITY EXECUTION FLOOR. Selection was max(val_fitness) with NO
+  # execution-quality condition, so a candidate whose authored reward RAISED on much of its training
+  # (the R66 neutral fallback standing in, counted by `train_safe_default_count`) could be frozen —
+  # and the sealed leg then RE-TRAINS that reward and inherits the contamination. Under H2 that
+  # confounds the arm contrast with EXECUTION QUALITY, when identification requires the arms to
+  # differ ONLY in the authored reward. A candidate is ELIGIBLE iff
+  #     train_safe_default_count / train_safe_call_count < winner_max_fallback_frac
+  # and the winner is max(val_fitness) among the eligible. If an arm has NO eligible candidate the
+  # run FAILS LOUD rather than silently promoting a contaminated one.
+  # EFFECT-BLIND BY CONSTRUCTION: reads an execution counter only — never val_fitness, test_sharpe,
+  # test_cvar or any performance quantity — so it cannot be steered toward an outcome, and none
+  # existed when it was registered.
+  # THRESHOLD-INSENSITIVE, not tuned: over 613 counter-carrying records the distribution is strongly
+  # bimodal — worst trace 0.41 %, mildest severe 39.40 %, a 96x EMPTY GAP — so any value in ~1-35 %
+  # partitions the data identically. See PREREGISTRATION.md R115 and ADR-062.
+  winner_max_fallback_frac: 0.10
+
+loop: {runs: once, cpcv_on: winners, per_candidate_budget: fixed}   # audit B-3, B-5
+# R74 (2026-07-02): B* from the Split-C convergence pilot — R70's extend-until-converged criterion is
+# structurally unsatisfiable on this workload (eval flat-within-noise 25k..350k on BOTH ladders; the
+# detector's tolerance scales with the curve's own range -> collapses on a flat curve). Totality of
+# evidence: critic steep descent done by 100k (0.59->0.10), 350k nominally WORSE than 200k (overfit
+# direction), ~17 buffer passes at 200k. Mirrors campaign.yaml + algos.yaml (budget-mirror guard).
+train_steps_per_candidate: 400000  # R77 (2026-07-18): raised to the measured knee by the pre-committed extended-curve rule (see PREREGISTRATION.md R77; verdict artifact outputs/tables/bstar_rule_verdict.json)
+
+# R107 (2026-07-26, RATIFIED by Tamer) — the EXECUTED thread regime. NOT a design/statistical
+# parameter: no hypothesis, arm, budget, seed, fitness or analysis value changes. It is registered
+# because multi-threaded BLAS changes the ORDER of float reductions, so the thread count is part of
+# the DETERMINISM ENVELOPE (docs/MAX_THROUGHPUT_RUN_PLAN.md's pre-committed bench-then-ratify rule).
+# Split justification is MEASURED IN BOTH DIRECTIONS (jobs 17784/17836): one training scales 2.72x
+# at 8 threads and REGRESSES to 2.11x at 16, while 8 cores as 8x 1-thread trainings give ~104
+# steps/s aggregate vs ~35 for one 8-thread training. Hence: threads where LATENCY binds, cores
+# where THROUGHPUT binds. Confined to the SEARCH/chain leg, so every SCORED comparison (all paired
+# contrasts, all CRN pairing) stays on the uniformly 1-thread TEST leg.
+execution:
+  chain_thread_count: 8            # sequential chains ONLY (bayes_opt GP-EI, LLM reflection, TPE/CMA-ES)
+  test_leg_thread_count: 1         # the scored leg — NEVER change: CRN bit-exactness lives here
+  chain_thread_count_max: 8        # 16 measured SLOWER than 8 (small-matmul oversubscription)
+  thread_regime_recorded_in: "scripts/capture_env.py -> determinism_env.{OMP,MKL,OPENBLAS,NUMEXPR}_NUM_THREADS + torch_cuda.num_threads (so a heterogeneous regime is DETECTABLE by audit, not merely improbable)"
+
+# R19 (2026-06-20): de-duped the mislabelled spy_buy_and_hold (== 1/N, no index in the anonymised panel)
+# and expanded to 8 DISTINCT published allocators. 2026-07-26: +min_cvar (the CVaR-optimal / TAIL-optimal
+# allocator, Rockafellar-Uryasev 2000) = 9 -- the classical tail-optimizer, so the report-only comparison now
+# reads "the LLM's tail-aware reward beats even the benchmark that optimises the very tail it targets"
+# (comparator-canon research; report-only, DSR-deflated at N=1 like the others; the 8-name audit LEAVE-ALONE
+# stands -- min_cvar is the ONE non-gratuitous tail-study addition). Names match _BENCHMARK_NAMES exactly.
+benchmarks: [equal_weight, mean_variance, risk_parity, hrp, minimum_variance, maximum_diversification, inverse_volatility, cross_sectional_momentum, min_cvar]
+
+inference:
+  primary_overfitting_guard: pbo_cscv
+  deflated_sharpe: secondary
+  # Amendment 2026-06-19 (R11): relabel "sharpe_ledoit_wolf" -> re-centred basic (empirical) stationary
+  # block-bootstrap; the bootstrap SE cancels in the two-sided p-value (|boot-obs| >= |obs|), so size is
+  # certified by null_calibration (audit C-7), not studentized. Numerics unchanged (label correction only).
+  difference_tests: [sharpe_recentred_bootstrap, cvar_difference]
+  bootstrap: stationary_politis_romano        # single-series tool (sharpe/cvar_difference_test)
+  # Amendment 2026-06-20 (R16): the arm-contrast FAMILY difference tests aggregate ACROSS SEEDS via the
+  # rliable per-seed method — per-seed Sharpe/CVaR -> IQM -> PAIRED stratified bootstrap over the shared
+  # training seeds (paired_seed_difference_test), carrying the across-seed variance. This realizes the
+  # `seed_reporting: rliable_iqm` intent AT the test and supersedes the prior seed-AVERAGED series
+  # bootstrap (anti-conservative ~21% vs the correctly-sized ~5% true-null rejection, measured on a
+  # 30-seed calibration sample — this is the method-calibration n, not the campaign winner count). The
+  # re-centred convention (R11), the frozen family (R13, m=6), and the correction are unchanged.
+  difference_test_unit: per_seed_iqm_paired_seed_bootstrap
+  seed_reporting: rliable_iqm_poi_stratified_ci
+  multiple_testing: romano_wolf_or_bh_fdr     # cross arm x metric family (audit B-8)
+  multiple_testing_primary: benjamini_hochberg # BH q=0.05 primary; joint Romano-Wolf = FWER alternative (R13)
+  multiple_testing_q: 0.05
+  alpha_hurdle_t: 3.0    # ⚠ REGISTERED BUT NOT WIRED (verified 2026-07-26, deep review loop 6): a repo-wide
+                       # search finds NO consumer of this key in src/ or scripts/. src/inference/attribution.py
+                       # produces absolute alphas with HAC t-stats (`alpha_t`) but never applies a t>3 gate.
+                       # So the Harvey-Liu hurdle is currently a dead registered rule: either wire it before
+                       # any ABSOLUTE-alpha claim is made, or withdraw it by amendment. Disclosed, not hidden.                          # Harvey-Liu-Zhu — scoped to ABSOLUTE-alpha claims only (R13)
+  alpha_hurdle_scope: absolute_alpha_claims_only
+  trial_count_stated: true
+  claim: comparative_not_beats_market
+  # Amendment 2026-06-19 (R13): the realized multiple-testing family is ENUMERATED + FROZEN. It is exactly
+  # what scripts/analyze_campaign.collect_family_pvalues enumerates: {arm-contrast x held-out-metric} =
+  # 3 H2 contrasts x {Sharpe, CVaR-0.05} = m=6 (incl. the H2 distributional-vs-{scalar, placebo,
+  # scalar_cvar5} legs). cvar_01 is opt-in (would grow m to 9), NOT in the frozen default family.
+  # analyze_campaign/run_campaign assert the realized contrast set == this family (the `members` union).
+  #
+  # Amendment 2026-06-25 (R25): the HEADLINE decision is now TWO CO-PRIMARY intersection-union tests
+  # (IUTs), NOT one m=6 BH family gated by a conjunction. Berger (1982): a conjunction IS an IUT and is
+  # already the multiplicity correction (joint size <= max leg size = alpha), so the old
+  # (conjunction o BH-over-6) DOUBLE-corrected and was under-powered against H2 (DEEP_H2 §3.2-3.3). The
+  # m=6 enumeration below is UNCHANGED (still the frozen realized-family assert + the BH-over-6 REPORTED
+  # SENSITIVITY); what changes is the GATE: it now partitions the 6 into two declared families, each
+  # decided one-sided at alpha=0.05 with NO further leg correction (the IUT is the correction). `m: 6`
+  # is retained as the union size (the Sidak selection-power multiplicity in scripts/power_analysis.py
+  # ranges over all 6 enumerated tests).
+  testing_family:
+    m: 6                                        # UNION size (BH-over-6 sensitivity + Sidak multiplicity)
+    structure: two_co_primary_iut               # R25: H2-RA (Sharpe) + H2-Tail (CVaR-5%), each its own IUT
+    decision_rule: per_family_iut_one_sided_no_leg_correction   # the conjunction IS the correction (Berger 1982)
+    alpha_one_sided: 0.05                        # each IUT leg decided one-sided in the predicted direction
+    bh_over_6: reported_sensitivity_not_gate     # R25: BH over the m=6 union is REPORTED, never the gate
+    contrasts:                                 # (a, b) read "a predicted better than b"
+      - [distributional, scalar]
+      - [distributional, placebo]
+      - [distributional, scalar_cvar5]
+    metrics: [sharpe, cvar]
+    cvar_levels: [0.05]                         # headline alpha; cvar_01 opt-in (high-variance, EVT)
+    # The TWO co-primary IUTs (R25). Each is supported iff ALL THREE of its legs reject one-sided at
+    # alpha=0.05 in the predicted direction (distributional strictly better). H2-Tail is additionally
+    # CORROBORATED (not gated) by the FZ0/(VaR,ES) comparative ES backtest where available.
+    families:
+      h2_ra:                                    # risk-adjusted-performance IUT (DEEP_H2 §7.1)
+        m: 3
+        metric: sharpe
+        members:
+          - {arm_a: distributional, arm_b: scalar,       metric: sharpe, level: null}
+          - {arm_a: distributional, arm_b: placebo,      metric: sharpe, level: null}
+          - {arm_a: distributional, arm_b: scalar_cvar5, metric: sharpe, level: null}
+      h2_tail:                                  # tail-outcome IUT (DEEP_H2 §7.1)
+        m: 3
+        metric: cvar
+        level: 0.05
+        corroborated_by: fz0_var_es_comparative_backtest   # reported, NOT a gate
+        members:
+          - {arm_a: distributional, arm_b: scalar,       metric: cvar, level: 0.05}
+          - {arm_a: distributional, arm_b: placebo,      metric: cvar, level: 0.05}
+          - {arm_a: distributional, arm_b: scalar_cvar5, metric: cvar, level: 0.05}
+    members:                                    # the m=6 enumerated UNION (frozen realized-family assert)
+      - {arm_a: distributional, arm_b: scalar,       metric: sharpe, level: null}
+      - {arm_a: distributional, arm_b: scalar,       metric: cvar,   level: 0.05}
+      - {arm_a: distributional, arm_b: placebo,      metric: sharpe, level: null}
+      - {arm_a: distributional, arm_b: placebo,      metric: cvar,   level: 0.05}
+      - {arm_a: distributional, arm_b: scalar_cvar5, metric: sharpe, level: null}
+      - {arm_a: distributional, arm_b: scalar_cvar5, metric: cvar,   level: 0.05}
+  # Amendment 2026-06-19 (R12): SESOI + symmetric TOST equivalence margin for the headline H2 contrast.
+  # Amendment 2026-07-25 (R104): the SESOI VALUE (0.05 DSR) is UNCHANGED; its JUSTIFICATION is upgraded from
+  # ASSERTED to DERIVED — the economic band in sesoi_derivation below (docs/SESOI_DERIVATION_2026-07-25.md).
+  # 0.05 DSR = 0.0756 ann-Sharpe (k=0.6616 DSR/ann-Sharpe, T=694; CAMPAIGN_power.md T2.5) sits INSIDE
+  # [cost-breakeven 0.0055, practitioner-material 0.10] -> exploitable-after-costs AND stricter-than-practitioner.
+  sesoi: 0.05                                   # validation-DSR units
+  equivalence_margin: 0.05                      # symmetric TOST margin (+/- DSR)
+  sesoi_derivation:                             # R104 (2026-07-25): DERIVES sesoi=0.05 (was asserted). tests/test_sesoi_derivation.py binds this band.
+    dsr_per_ann_sharpe: 0.6616                  # k (delta-method ceiling, z=0, T=694): DSR = k * ann_Sharpe (CAMPAIGN_power.md T2.5)
+    sesoi_ann_sharpe_equiv: 0.0756              # = sesoi / k  (0.05 DSR -> 0.0756 ann-Sharpe)
+    book_sigma_ann: 0.202                       # equal-weight T0 book annualised vol, MEASURED (data/gold/returns_panel_univ5)
+    book_turnover_ann_oneway: 1.12              # equal-weight daily-rebalanced one-way turnover per yr, MEASURED
+    cost_bps_oneway: 10                         # env transaction cost, one-way bps (must match environment cost)
+    lower_bound_cost_breakeven_sharpe: 0.0055   # = cost_bps*1e-4 * turnover / sigma; below this an edge is unexploitable-after-costs
+    upper_bound_practitioner_sharpe: 0.10       # a deliberately-CONSERVATIVE practitioner-material heuristic (ann-Sharpe); basis below
+    practitioner_floor_basis: "0.10 ann-Sharpe = a conservative practitioner heuristic. DeMiguel-Garlappi-Uppal 2009 gives the QUALITATIVE '1/N is remarkably hard to beat' result; their tabulated 0.10-0.20 is MONTHLY (~0.35-0.69 annualised, Lo 2002), so 0.10 ANNUALISED is conservative. Corroborated by Lo 2002 (Sharpe-distinguishability) + Harvey-Liu-Zhu 2016 (t>3). No canonical '0.10-0.20 ANNUALISED' cite exists -> a stated conservative synthesis; correcting the unit only STRENGTHENS conservativeness (SESOI 0.0756 sits a fortiori below)."
+    verdict: sesoi_inside_band                  # 0.0055 < 0.0756 < 0.10 (exploitable-after-costs AND conservative)
+    source: docs/SESOI_DERIVATION_2026-07-25.md
+  # Amendment 2026-06-25 (R26/R30/R31): the PRE-REGISTERED report-only SECONDARY families. ALL use keys DISJOINT
+  # from the frozen m=6 above, so analyze_campaign.assert_realized_family_matches_frozen is untouched; each is
+  # computed + reported but NEVER gates H2. Pre-registering them BEFORE the sealed-test freeze is what pre-empts
+  # the "your edge is just BAB/low-vol" recast (R26; LIMITATIONS_REGISTER L15) and makes H3/H4 campaign-grade (R30).
+  secondary_families:
+    factor_attribution:                         # R26 — difference-in-alpha vs the factor ladder (the BAB/low-vol pre-empt)
+      key: attribution
+      ladder: [capm, ff3, carhart4, ff5, ff6, ff6_bab, ff6_bab_qmj]
+      statistic: difference_in_alpha_paired_across_seed   # Newey-West (1994) HAC SE; BH WITHIN this family
+      controls_for: [market, size, value, momentum, profitability, investment, betting_against_beta, quality]
+    h3_iterative_vs_singleshot: {key: h3, statistic: per_seed_iqm_paired, equivalence: tost_0.05}   # R30
+    h4_search_controls: {key: h4, tests: [h4a_vs_random_search, h4b_vs_bayes_opt, h4c_vs_cma_es, h4d_vs_tpe], correction: bonferroni_4}   # R30; +cma_es/tpe 2026-07-26 (the separate-estimands mirror of the N4 portfolio IUT)
+    h2_tost_equivalence: {key: h2_tost, margin: 0.05, units: test_statistic}   # R29/R30 — the bankable-null bound
+    h2_structure_control:                       # R32 — the format-vs-content structure control (Gupta-Hartford)
+      key: h2_structure
+      arm: placebo_shuffled                     # the 5th LLM arm: distributional's EXACT block, values DERANGED
+      contrast: [distributional, placebo_shuffled]
+      metrics: [sharpe, cvar]
+      cvar_level: 0.05
+      decision: one_sided_both_legs_content_over_format
+      gates_h2: false                           # DISJOINT from the frozen m=6 union — reported, NEVER a gate
+    dsr_effective_n: {key: dsr_effective_n, report_only: true}   # R30 — sequential-reflective correlation sensitivity
+    cross_hypothesis_multiplicity: {key: cross_hypothesis_multiplicity, stance: separate_estimands_bonferroni_4_sensitivity}  # R31 = the CURRENT DEFAULT; R105 registers a conjunctive-validity graphical-FWER UPGRADE (inference.validity_tier) that supersedes this ON supervisor ratification before the freeze
+    delisting_band:                             # R33 — the delisting-return sensitivity band (DATA-level; DISJOINT)
+      key: delisting_band
+      panel: univ4                              # the Shumway panel carrying the 333 delisting cells (NOT the headline — univ5 is, R73); band overwrites
+                                                #   them. The univ4-era panel ends 2025-12, so under Split C the band CLAMPS its window to the overlap
+                                                #   and records the clamp (analyze_campaign.delisting_band); ADR-051 located the truth AT the 0% end
+                                                #   (univ5s == univ5: 333/333 vendor terminals kept, zero surcharges; univ4 = M&A contamination +
+                                                #   terminal double-count).
+      grid: [0.0, -0.30, -0.55, -1.00]          # delisting-return d applied to the 333 test-window cells; univ4=-30/-55 = the structural extreme
+      metrics: [cvar_05, cvar_01]               # pooled tail recomputed per d (DATA-level, NO policy re-run)
+      report_only: true
+      gates_h2: false                           # DISJOINT from the frozen m=6 union — reported, NEVER a gate
+  # ---- R67 JZS prior pin, MIRRORED 2026-07-26 (ratification item 7c; Tamer + Okhrati) ------------
+  # R67 pins the ONE researcher degree of freedom in the Bayesian null complement -- the Cauchy prior
+  # scale -- and requires it to be PINNED before the freeze for the complement to be confirmatory.
+  # It WAS pinned, but in PROSE ONLY: config/preregistration.yaml carried no `jzs`/`prior`/`bf_threshold`
+  # key, so scripts/freeze.py's prose<->yaml assertions could not check it (they can only compare fields
+  # present on BOTH sides), unlike the SESOI, the equivalence margin and the m=6 family. The hash binds
+  # the prose bytes, so the VALUE could never move silently -- what was missing was the check that would
+  # catch the CODE drifting from the registered value. Mirrored here; the code<->yaml drift guard lives
+  # in tests/test_bayes_null.py (deliberately NOT in freeze.py, which stays import-light: pulling
+  # src/inference/bayes_null.py into the gate would drag scipy in at freeze time).
+  bayes:
+    prior_scale_r: 0.7071067811865476          # sqrt(2)/2 — the BayesFactor "medium" default (R67); == src/inference/bayes_null.DEFAULT_R
+    prior_scale_grid: [0.5, 0.7071067811865476, 1.0, 1.4142135623730951]   # {0.5, sqrt(2)/2, 1, sqrt(2)} — the MANDATORY robustness band; == bayes_null.R_GRID
+    bf_threshold: 3.0                          # == the bayesian_null_report default; the null is "supported" only ACROSS the whole grid
+    rope: reuses_frozen_equivalence_margin     # R67: the ROPE is the already-frozen equivalence_margin above, never a second free parameter
+    status: ratified                           # 2026-07-26 (Tamer + Okhrati). R67 made the complement CONFIRMATORY only on user ratification of the pinned r; before that it was a disclosed exploratory appendix. It remains REPORT-ONLY and DISJOINT from the m=6 family either way.
+  validity_tier:                                # R105 (2026-07-26, A3): the DESIGNED graphical-multiplicity confirmatory tier. Full design + 7 fragility guards: docs/VALIDITY_TIER_DESIGN_2026-07-26.md
+    status: ratified   # R108 (2026-07-26): SIGNED OFF by Tamer AND Okhrati ("me and Okhrati ratify everything"), which is exactly the precondition this field required. The graphical validity tier is therefore ACTIVE and SUPERSEDES the R31 separate-estimands stance. NOTE this is a TRANSCRIPTION of the sign-off, not a design act: the weights, topology, node set and per-node strength were already fully specified by the design session; only the supervisor signature was outstanding. STILL NOT FROZEN (Tamer's standing instruction) — the freeze remains GO-step-1.
+    ratified_by: [tamer, okhrati]                        # R108
+    ratified_utc: "2026-07-26"                           # R108. (The trailing fragment here read "R108Until ratified, R31 is the disclosed operative default." -- a mangled splice of the pre-ratification note into the ratification stamp. Cleaned 2026-07-27 pre-freeze: ratification HAPPENED, so the R31-until-ratified caveat no longer applies and must not be sealed into the frozen record.)
+    method: graphical_bretz_maurer_brannath_posch_2009    # bretz2009graphical; a shortcut for a closed test (marcus1976closed) -> strong FWER at alpha
+    alpha: 0.05
+    fwer_control: strong                        # H2 IUT internals UNTOUCHED (berger1982iut); the graph governs cross-hypothesis alpha-flow ONLY
+    claim: conjunctive_validity                 # "validated: reward-content matters (H2) AND is CONTENT-not-format (N5) AND iteration helps (H3) AND beats naive SEARCH (H4) AND beats the best HUMAN reward over the full 11-canon (H1/N6)"
+    supersedes_on_ratification: cross_hypothesis_multiplicity   # the R31 separate-estimands / Bonferroni-4 stance
+    scope: confirmatory_opus_arm_at_achieved_rung              # single confirmatory look on Opus; the 10 legs stay report-only (R101); m=6 fed-vector + identification UNTOUCHED
+    nodes:
+      N1_h2_tail:   {test: h2_tail_iut,        metric: cvar,   level: 0.05, direction: one_sided_dist_better}
+      N2_h2_ra:     {test: h2_ra_iut_or_tost,  metric: sharpe, direction: one_sided_dist_better, equivalence: tost_0.05_dsr}  # TOST IS an IUT (bergerhsu1996equivalence) -> a valid node p-value, so equivalence and superiority mix in one graph. ⚠ CORRECTED 2026-07-26 (deep review, loop 8): this said "our predicted tail-win + Sharpe-equivalence activates the tier", which MISSTATES the registered prediction. PREREGISTRATION.md §1a's specific a-priori prediction is the NULL branch (Sharpe tie AND tail tie -- "its negative responsiveness (~ -0.05) and un-beaten placebo predict the NULL branch"); a tail WIN is the STRICT-branch outcome, not the predicted one. Under the PREDICTED branch N1 does not reject, so activation rests entirely on N2 rejecting via TOST (proving equivalence) -- a real pre-registered alpha source, but power-limited: docs/SESOI_DERIVATION_2026-07-25.md puts the seeds needed to declare equivalence at n* ~ 173 while R101's expected common rung is ~100-189, so the tier is BORDERLINE to activate on the design's own prediction. Stated up front rather than discovered at analysis time; the severity argument depends on reporting the registered prediction, not a more favourable one.
+      N3_h3:        {test: h3_iterative_gt_singleshot, direction: one_sided, endpoint: per_seed_iqm}
+      N4_h4:        {test: h4_llm_gt_search_iut, comparators: [random_search, bayes_opt, cma_es, tpe], direction: one_sided}   # IUT over the 4-optimiser portfolio = beat-the-MAX (best black-box optimiser at matched budget); size<=alpha for ANY portfolio size (berger1982iut) -> one valid p-value, ZERO added family-wise multiplicity
+      N5_structure: {test: distributional_gt_placebo_shuffled, metric: cvar, level: 0.05, direction: one_sided_content_over_format, arm_b: placebo_shuffled}   # 2026-07-26 UPGRADE: the tail effect is CONTENT not FORMAT (deepens the mechanism headline); forking-path-clean (never ran in the 6-arm prototype)
+      N6_h1:        {test: llm_beats_best_human_reward, direction: one_sided_llm_better, method: intersection_union_over_canon, comparator: full_11name_hand_reward_canon, champion: best_human_is_max_over_canon_no_selection, endpoint: sharpe_annualized}   # ⚠ ENDPOINT CORRECTED 2026-07-26 (deep review, loop 5) — it registered `deflated_sharpe`, which the code NEVER computed (scripts/analyze_campaign.py builds the IUT legs from annualised per-seed Sharpe). The CODE is the correct side, MEASURED at the executed test length T=1571: a DSR endpoint scores the winner against an E[max SR] benchmark of 0.83 ANNUALISED (n_trials=30) while scoring each hand reward against 0.0 (n_trials=1) — DIFFERENT nulls per arm, so their paired difference is not a comparison of the same quantity — and the winner then loses every leg even at an equal or better true Sharpe (ann_SR 0.50 -> baseline DSR 0.91 vs winner 0.235; ann_SR 1.00 -> 0.993 vs 0.656), i.e. the IUT could essentially never reject. DSR is also a bounded probability that saturates on a 1571-session window. ALSO: the DSR-deflation RATIONALE was misapplied — deflation corrects for reporting the max of N strategies on the SAME data, but selection happens on VALIDATION (run_campaign selects on val_fitness; held_out_fitness refuses a non-val split) and the test leg is SEALED, so there is no test-set max-over-N to deflate. The genuine residual asymmetry (LLM winner = best of 30 validation candidates vs each hand reward = one fixed specification) FAVOURS THE LLM and is disclosed as the un-tuned-baseline bias (CH6). Using the same annualised Sharpe as the H2 legs also keeps H1/N6 and the headline on one shared inference tool. The endpoint choice is part of what ratification covers.   # 2026-07-26 (Tamer "make it beat the HUMAN, smart + strongly-backed"): the CLAIM = "the LLM-designed reward beats the BEST human-crafted reward". FORMALIZED as an INTERSECTION-UNION TEST (berger1982iut): the best human == max over the canon, and (LLM > max) <=> (LLM beats EVERY member), so the node rejects iff the LLM beats all 11 hand-rewards each at level alpha. This makes "the best human" PRECISE without cherry-picking which reward is best -- and that cherry-pick, taken on the sealed test, IS the White-2000 data-snoop that forced the OLD H1 to descriptive-only. The IUT is snoop-free, level-alpha for free (Berger 1982), conservative, and consistent with the H2 co-primary IUTs. Canon-as-champion: the LLM clears the ENTIRE standard hand-reward toolkit, not one cherry-picked baseline (a first in the LLM-reward-design lineage). SUPERSEDES the val-select framing, which was DEAD CODE: the baseline TEST stage archives val_fitness=NaN (run_campaign._baseline_winner_record), so beat_human_baseline fell back to a test-snoop; the IUT needs NO baseline val-roll -> the fragility is DISSOLVED, not patched.
+    initial_weights: {N1_h2_tail: 0.5, N2_h2_ra: 0.5, N3_h3: 0.0, N4_h4: 0.0, N5_structure: 0.0, N6_h1: 0.0}   # ALL alpha starts on the H2 headline: N3/N4/N5/N6 begin at weight 0 and activate ONLY on upstream success, so PROMOTING them costs the headline nothing relative to a graph that had given them initial weight. # ^^ HONEST BASELINE CORRECTION (deep review 2026-07-26): the earlier note said "ZERO headline power cost" full stop, which compares against the wrong baseline. The OPERATIVE default is R31 -- H2-RA and H2-Tail as SEPARATE ESTIMANDS, each an IUT decided at the FULL one-sided alpha=0.05 (PREREGISTRATION.md §1 H2, "two-tier verdict"). Under this graph each co-primary is instead tested at w_i*alpha = 0.5*0.05 = 0.025. That IS a headline power cost: a one-sided leg powered to 0.80 at alpha=0.05 falls to 0.7007 at alpha=0.025 (verified numerically, normal approximation). It is the price of STRONG FWER across the whole six-node family, and it may well be worth paying -- but it is not zero, and ratifiers must accept the trade explicitly (already listed in ratification_pending: alpha_allocation).
+    edges:                                      # alpha recycled on ANY rejection (superiority OR equivalence); each node's out-edges sum to <= 1. WEIGHTS/TOPOLOGY RATIFIED 2026-07-26 by Tamer + Okhrati (R108, `alpha_allocation` in ratification_completed below); the "ratification-pending" note here was stale and is corrected 2026-07-27 pre-freeze so the frozen record does not contradict itself.
+      N1_h2_tail:   {N2_h2_ra: 0.34, N4_h4: 0.33, N5_structure: 0.33}   # tail confirmed -> RA co-primary + search + content-over-format
+      N2_h2_ra:     {N1_h2_tail: 0.34, N3_h3: 0.33, N6_h1: 0.33}        # RA confirmed -> tail (co-primary) + iteration + beat-the-human
+      N3_h3:        {N4_h4: 0.5, N6_h1: 0.5}
+      N4_h4:        {N3_h3: 0.34, N5_structure: 0.33, N6_h1: 0.33}
+      N5_structure: {N3_h3: 0.5, N4_h4: 0.5}
+      N6_h1:        {N3_h3: 0.5, N4_h4: 0.5}
+    primary_rule: bonferroni_weighted_graph              # referee-proof under any dependence
+    sensitivity: [romano_wolf_graph, bh_fdr_over_m6]     # retained power sensitivity + cross-metric disclosure (benjamini1995fdr, romanowolf2005stepwise)
+    excludes: [H1_snooped_test_max]             # the SNOOPED reading (pick the max-over-the-sealed-TEST hand-reward, then test the LLM against THAT one) has no valid node p-value -> excluded; the snoop-free formalization -- the IUT that requires the LLM to beat EVERY hand-reward (== beat the best, no comparator selected, nothing to snoop) -- IS confirmatory node N6 (2026-07-26, Tamer "beats the human, smart")
+    forking_path_guard: "the ENTIRE graph (nodes/weights/edges/tests/directions/endpoints) is FROZEN before the sealed leg; topology principled + symmetric (headline-first; H3<->H4 symmetric), NOT engineered around any prototype outcome; no prototype number enters the dissertation"
+    ratification_pending: []                    # R108 (2026-07-26): EMPTY - all items below were signed off by Tamer AND Okhrati.
+    ratification_completed: [conjunctive_claim, graphical_primary_vs_bh_primary, alpha_allocation, n4_h4_confirmatory_portfolio, n5_structure_node, n6_h1_confirmatory_node, h1_canon_expansion_4_to_11, cpu_randomised_device_block, uniform_reasoning_off_and_matched_caps]   # ★ R106 (2026-07-27) REPAIR: `uniform_reasoning_off_and_matched_caps` was ITEM 8 of the ratification pack and was signed off with the rest ("me and Okhrati ratify everything", 2026-07-26) -- but it was omitted from this list AND from ratification_pending, so it was recorded as neither done nor outstanding and never reached config/legs.yaml. Exactly the R84 failure mode (a registered NAME needs a registered VALUE) with the name lost too. Implemented + re-listed here.   # R108: the full set ratified 2026-07-26 by Tamer + Okhrati. n4 = H4 report-only -> confirmatory beat-the-max 4-optimiser portfolio {random, GP-EI, CMA-ES, TPE} + the 7->9 arm roster. cpu_randomised_device_block = the CPU lane admitted as a device BLOCK level alongside V100/A100: device is a nuisance factor, every CRN comparison unit stays device-HOMOGENEOUS (seed-pool blocks), so the device cancels in each paired difference; an ALL-CPU campaign is single-substrate and needs no blocking at all.
+    ratification_pack: docs/RATIFICATION_PACK_2026-07-26.md   # ★ THE SIGN-OFF DOCUMENT (2026-07-26): one page per pending item -- what changed, WHY, the MEASURED cost, what it buys, and a recommendation, with a sign-off table. Written because the blocker to ratification was that no single artifact stated what needed ratifying. Covers every entry in ratification_pending above PLUS the three open reconciliations (leg_calendar_gate vs the Aug-27 uniform stop; the capability anchor being non-estimable at 2/10 legs; the prose-only JZS prior pin) and R106. Read this FIRST when seeking sign-off.
+    per_node_strength: docs/VALIDITY_TIER_DESIGN_2026-07-26.md   # the evidence + power + non-fragility guard PER confirmatory node (Tamer 2026-07-26: additions must be very strong + non-fragile)
+    candidate_upgrades:                         # 2026-07-26 upgrade analysis (docs/VALIDITY_TIER_DESIGN_2026-07-26.md #upgrade-analysis)
+      n6_h1_dominates_canon: "PROMOTED 2026-07-26 to CONFIRMATORY node N6 (Tamer nothing-frozen; h1_baselines ALSO expanded 4->11 = the full canon). CLAIM (Tamer 2026-07-26, 'make it smart + sound'): 'the LLM-designed reward DOMINATES the human hand-reward canon' -- the precise, snoop-free reading of 'beats the best human'. THE SUBTLETY that makes it smart: 'the best hand-reward' is not nameable a priori -- it is the pointwise MAX over the canon, and naming it by the sealed-test result IS the White-2000 comparator data-snoop that forced the OLD H1 to descriptive-only. TWO fixes were possible: (a) val-select the champion + score on test -- REJECTED: DEAD CODE (run_campaign._baseline_winner_record archives val_fitness=NaN, so no baseline carries a val signal and beat_human_baseline already falls back to the test-snoop) AND it needs a fragile new baseline val-roll. (b) ADOPTED, smarter + non-fragile: DOMINATING the canon (beating EVERY member) is logically equivalent to beating the max (the best), but selects NOTHING -> snoop-free by construction. Formalized as an INTERSECTION-UNION TEST (berger1982iut): the node rejects iff the LLM beats all 11 hand-rewards each at level alpha; IUT p = max over the 11 one-sided leg p-values. Level-alpha for free, conservative, consistent with the H2 co-primary IUTs. REPORTED WITH the dominance PROFILE (per hand-reward: significantly-beaten / statistically-tied / lost, + effect sizes) -- the honest structure beneath the binary (beats 9/11, ties the DSR, loses to none is richer + more mature than a bare verdict). CONSERVATISM IS A VIRTUE: the LLM DSR is deflated by its search multiplicity (N=30) while each human is N=1, so the human bar is conservatively HIGH -- dominating it anyway is strong. Canon-as-champion (full standard toolkit = the bar; a first in the LLM-reward-design lineage, which compared against a single hand-baseline). ★ STATUS, corrected 2026-07-27 pre-freeze: NO LONGER A CANDIDATE -- it was RATIFIED as confirmatory node N6 on 2026-07-26 by Tamer AND Okhrati (`n6_h1_confirmatory_node` + `h1_canon_expansion_4_to_11` in ratification_completed), and R111 then set its seed depth to climb the ladder. The trailing 'Registered as CANDIDATE ... -> ratification' was stale text describing the proposal that this same paragraph records as ADOPTED; left in place it would have been FROZEN into the design of record contradicting the ratification list eight lines below."
+    source: docs/VALIDITY_TIER_DESIGN_2026-07-26.md
+
+contamination: {blinding: anonymized_arrays, stratify: training_cutoff, second_model: open_weights_diff_cutoff}
+# SPLIT C (ADR-044 RATIFIED 2026-07-01; EXECUTED 2026-07-02 with the univ5 rebuild + the settled
+# 2026-06-30 cutoff, ADR-051 — a PRE-FREEZE design choice, never results-contingent):
+data_splits: {train: [2005, 2016], val: [2017, 2019], test: [2020, 2026]}
+# Amendment 2026-06-25 (R33, PREREGISTRATION §7): the HEADLINE data panel is the survivorship-corrected
+# R44 (2026-06-26, supersedes R33's univ4 headline): the headline TRAIN/TEST panel is univ3 (liquidate_to_cash /
+# zero-fill — NO fabricated losses). univ4 (Shumway 1997: -30% NYSE/AMEX, -55% NASDAQ booked (1+r)(1+dl)-1 on each
+# dead name's last valid session; 333 cells of the SAME 953-universe / 5283x953, 0 in the 620 live columns)
+# surcharges 100% of the 333 delistings INCLUDING premium M&A (Refinitiv carries no delisting reason/terminal on
+# disk), so it FABRICATES left-tail mass in a tail-risk study and is only the M&A-CONTAMINATED heavy END of the
+# band (R39). The headline tail INSTRUMENT is the {0,-30,-55,-100%} delisting_band (analyze_campaign.delisting_band):
+# the sweep moves pooled test CVaR-5% only ~2% (measured pre-Split-C, 2018-2025 window; re-derived at analyze
+# time on the executed window) -> the H2 tail ORDERING is INVARIANT. univ3 is integrity-screened
+# via univ3s (R39); univ4r (reason-gated re-pull, M&A keeps last price / failures surcharged,
+# docs/DATA_REPULL_DELISTING.md) is the CORRECT panel (recommended, OPTIONAL for H2 since the band is invariant).
+# The loader's live default IS univ5 (R73, 2026-07-02); the campaign needs no LLM_RP_GOLD_SUFFIX override.
+data_panel:
+  headline: univ5                       # R73 (extends R44): zero-fill, NO fabricated losses; Split C, 5406x963 to 2026-06-30
+  tail_instrument: delisting_band       # the {0,-30,-55,-100%} sensitivity is the headline tail result (H2 invariant)
+  band_zero_end: univ3                  # zero-fill 0% anchor; band computed on the univ3/univ4-era overlap (univ5 == univ3 byte-identically there)
+  band_heavy_end: univ4                 # Shumway -30/-55 = the M&A-CONTAMINATED heavy end (R39) + terminal DOUBLE-COUNT (ADR-051), NOT the tail truth
+  corrected_panel_executed: univ5s      # ADR-051 (2026-07-02) SUPERSEDES the planned univ4r: observed-terminal recovery, 333/333 vendor_terminal_kept, ZERO surcharges -> univ5s == univ5 byte-identically
+  resolves: ADR-024                     # R33 -> R44 -> R73: liquidate_to_cash IS the band-bracketed headline; the corrected panel EQUALS it
+algorithms: {headline: sac, secondary_critic: tqc, robustness: [ppo, td3]}
+
+# Amendment 2026-06-19 (R15, PREREGISTRATION §10): cost-robustness sweep. Re-price the FROZEN winners
+# across the bps grid WITHOUT retraining (net_c = gross - bps*1e-4*turnover; exact because cost is charged
+# after the action), report-only/post-freeze, never re-selecting.
+cost_sweep: {grid_bps: [0, 5, 10, 25, 50], metric: [sharpe, cvar_05], method: analytic_reprice, report_only: true}
+
+# ---- 2026-07-02 machine-readable mirror of PREREGISTRATION.md §1 H1 (EXPANDED 2026-07-26 to the full 11-name canon, Tamer nothing-frozen;
+# hand-reward panel context in §9 — the old "§18" cite was a line-number error, DEEP_H1 C-1) (audit H-L2): the FROZEN H1
+# "beat-the-human" baseline family. config/campaign.yaml (NOT hash-bound; its compute knobs stay amendable)
+# is what the baseline TEST stage actually reads, so scripts/freeze.py::assert_h1_baselines_match asserts
+# campaign.yaml's list equals THIS one — exactly like the arm-roster guard — and the executed family cannot
+# silently drift from the frozen §1-H1 family. Post-freeze changes require a dated amendment.
+h1_baselines: [raw_return, return_minus_variance, return_minus_cvar, differential_sharpe, differential_downside_ratio, mean_variance_utility, return_minus_drawdown, return_minus_downside, return_minus_turnover, log_growth, volatility_scaled_return]
+
+# ---- 2026-06-24 pre-freeze amendments (machine-readable mirror of PREREGISTRATION.md §5 / §6 / §11) ----
+# §5 (lambda): fitness.lambda_cvar = 0.0 above (RATIFIED 2026-07-01; the INERT lambda_grid/calibration_fold
+#   in config/inference.yaml are to be DELETED at the Phase-1 freeze). §6 + §11 mirrored here:
+search:
+  reflect_protocol_default: serial_reflect_on_best    # prototype-de-risked SERIAL path (run_campaign.py --search-gpu 0); M5/R32 upgraded its reflection seed to the generation's BEST (src/llm/loop.py:604-615, Eureka-faithful)
+  reflect_protocol_parallel: best_of_generation       # --search-gpu>0; Eureka-faithful; buffer==train_steps (50k = TEST)
+  headline_reflect_protocol: serial_reflect_on_best   # RATIFIED 2026-07-01 (supersedes R24) + CORRECTED 2026-07-02: headline = SERIAL execution (prototype-de-risked, reproducible; ADR-040 deadline allows the longer run; parallel cache now also resume-safe so reproducibility is EQUAL). The 07-01 text said "reflect-on-last" on a STALE premise — R32/M5 had already made the serial path reflect on the generation's BEST (code-verified 2026-07-02 at src/llm/loop.py:604-615), so the headline is Eureka-faithful and the amendment's "reflect-on-last deviation" disclosure is DISSOLVED. Parallel best-of-generation retained as a now-resume-safe robustness variant.
+agent_numerics:
+  tf32: true                            # config-driven (config/prototype.yaml agent.tf32, threaded to all 3 trainer legs); default-on, §11
+
+# ---- 2026-07-01 RATIFIED amendment: mechanism-headline reframe (PREREGISTRATION.md §2a) ----
+# Report-only, DISJOINT from the frozen m=6 testing family (does NOT gate H1-H4; keys disjoint from the
+# inference family). Foregrounds the MECHANISM as the dissertation's headline: does showing the LLM the
+# downside change the reward CODE it writes, and does it propagate to the realized tail? A null LOCATES
+# where the chain breaks. Robust to the sigma_D pilot: the mechanism headline holds whether H2 lands as
+# equivalence OR non-rejection.
+mechanism:
+  report_only: true
+  disjoint_from_m6: true
+  research_question: does_fed_tail_change_authored_code_and_propagate_to_realized_tail
+  causal_chain: [fed_tail_signal, authored_reward_code, trained_policy, realized_tail_outcome]
+  sub_questions:
+    sq1_responsiveness:
+      question: does_the_fed_signal_move_the_code
+      instrument: [responsiveness_spearman_bootstrap, reward_program_differential]
+      predicted_direction: positive_if_channel_acts     # prototype responsiveness was negative -> predicted break HERE
+    sq2_transmission:
+      question: does_the_code_move_the_outcome
+      instrument: mediation_fed_to_code_to_outcome_indirect_bootstrap
+      note: if_sq1_null_then_indirect_zero_for_any_b     # the chain severs at link 1
+    sq3_specificity:
+      question: genuine_use_of_tail_content_vs_surface_echo
+      instrument: [named_vs_blinded_structural_ast, legible_format_responsiveness_differential]
+  numeracy_bottleneck:                  # the headline reframe (ADR-039)
+    hypothesis: sq1_failure_is_partly_a_numeric_legibility_bottleneck   # close small floats ~50-70% (arXiv 2602.07812; NUMCoT 2406.02864)
+    ablation: legible_format_differential   # positive CI-separated legible-minus-raw gap CONFIRMS; null REFUTES
+  fingerprint_accounts:                 # §2a(f); A5 added by Amendment R76 (2026-07-11, pre-freeze/pre-data)
+    [a1_genuine_use, a2_readout_illegibility, a3_execution_failure, a4_prior_dominance, a5_rational_insensitivity]
+  fed_delta_snr_exhibit:                # §2a(h), R76: report-only, archive-computed (R61 cvar_ci machinery)
+    resolvable_signal_share: reported   # share of fed deltas > 2x their PAIRED block-bootstrap SE (common-path pairing)
+    attenuation_sensitivity: reported   # disattenuated SQ1 responsiveness — a SENSITIVITY, never the primary
+    snr_conditioned_responsiveness: reported   # SQ1 on high-SNR vs sub-noise delta subsets (the A5 fingerprint row)
+    a5_vs_a2_adjudicator: ci_annotated_re_rendering_d2plus_iv   # Stage-2; the format-only differential remains the A2 ablation
+  robust_to_sigma_d: true               # the mechanism headline does NOT depend on the equivalence-vs-non-rejection pilot outcome
+  # ---- 2026-07-26 (search-adequacy research): defend the predicted NULL against "you didn't search hard   ----
+  # enough". Our search is K=5/gen x 6 gen = 30 candidates/arm (~1/13 Eureka's 400/task, honestly BELOW the
+  # field norm). Pre-committing these rules BEFORE unblinding is what makes the adequacy check SEVERE (mayo).
+  null_severity_decomposition:          # the "would-have-caught-it" probability = ALL THREE legs high (mayo2018severetesting; altman1995absence)
+    leg1_responsiveness_power: met_by_750_authoring_subexperiment   # config/subexperiment.yaml + responsiveness_positive_control -> UPSTREAM of + independent of the 30-candidate search
+    leg2_search_adequacy: instrumented                             # the ONLY leg K=5 threatens -> the search_adequacy exhibit converts it from an assertion into a pre-committed bound
+    leg3_equivalence_seed_power: met_by_E1_seed_ladder             # the assurance-tier ladder to n=568 (equivalence/superiority power)
+    reviewer_attack_lands_on: leg2_only                            # the decomposition localises the attack to exactly one instrumented leg
+  sq1_upstream_of_search_width: true    # HOLDS for the MECHANISM headline, NOT for H2 equivalence: under a tail-blind selector more i.i.d. candidates (larger K) sample the SAME p(code|fed) more densely -> cannot manufacture an a=0 dependence nor reverse an a<0 one (if_sq1_null_then_indirect_zero_for_any_b). A responsiveness null locates the break at link-1 INDEPENDENT of K -> search-exhaustiveness is moot for the content claim. H2 performance-equivalence is a SEPARATE leg where K=5 is a DISCLOSED residual (APPENDIX_B B.3.3).
+  search_adequacy:                      # the pre-committed report-only EXHIBIT (~80% already coded; disjoint from m=6)
+    best_so_far_saturation: recommend_candidates_plateau_verdict   # per-arm val-DSR best-fitness vs gen 1-6 + the pre-committed patience=2 plateau rule (determine_design.recommend_candidates); a "still-rising" verdict is DISCLOSED as a bounded limitation (the prototype flagged the scalar arm still-rising -> re-run on the real campaign + disclose, never bury)
+    executable_valid_rate: reported     # fraction of K=5/gen authorings passing AST-gate + contract + error-free run (Eureka exec-filter analogue); high rate => effective search ~= nominal 30
+    oracle_headroom: reported           # best searched-LLM val-DSR minus (a) the 11-canon hand-reward max (N6) and (b) the pooled best across arms; small residual => headroom exhausted (adequacy shown), large => budget-limited (disclosed)
+    within_generation_diversity: reported   # pairwise EPIC/STARC distance among the K=5 per-gen candidates -> guards the K-collapse failure (prompt-variation -> near-duplicates -> effective width < 5)
+    coverage_vs_k_extrapolation: reported   # fit the exponentiated-power-law coverage(k) (brown2024monkeys) on the per-gen samples -> a PRINCIPLED bound on whether a larger K would plausibly surface a qualifying candidate
+    lineage_precedent: [liu2024eoh, agrawal2026gepa]   # EoH beats FunSearch with FEWER queries; GEPA beats RL with 35x fewer rollouts -> adequacy is search QUALITY/saturation, NOT raw width (refutes the naive "K<16 => inadequate" prior)
+    budget_decision: keep_and_instrument    # 2026-07-26 ULTRATHINK (search budget = Ramin's science call; the K=5/30 value is UNCHANGED from the original registration, so this row registers a decision to KEEP, not a change requiring sign-off -- the "ratification-pending" tag was stale against `ratification_pending: []` above and is removed 2026-07-27 pre-freeze rather than frozen as a contradiction): KEEP K=5/30 -- increasing width TRADES the already-weakest leg3 (seed power: reframed INCONCLUSIVE at MDE>SESOI, rungs>189 aspirational under R101) for a marginal leg2 gain that is conservative for H1/H4 + does NOT bind the mechanism headline (leg1, upstream of K). The coverage_vs_k instrument is a STRONGER defence than a bigger raw K, at ZERO seed cost. Full reasoning: EVIDENCE_AND_FRAGILITY_LEDGER.md.
+
+# ---- 2026-07-01 RATIFIED amendment: risk-free numeraire (PREREGISTRATION.md §10) ----
+numeraire:
+  report_only: true
+  headline_risk_free: 0.0               # rf=0 headline (excess == total); cancels to FIRST ORDER in the arm contrast (common-mode)
+  idle_cash_daily_rate: 0.0             # config/environment.yaml cash_daily_rate (env prices cash when set; frozen value 0)
+  rf_excess_robustness: reported        # DGS3MO-excess sensitivity (analyze_campaign.h2_sharpe_rf_robustness) demonstrates rf-invariance of the H2 ordering
+
+# ============================================================================ #
+# V2 MODEL REPLICATION SUITE (R80/R81, 2026-07-20 — pre-data; ADR-059/060).    #
+# REPORT-ONLY: keys disjoint from the m=6 machinery; nothing here gates H1-H4. #
+# The confirmatory author is Opus 5 (R102, 2026-07-24 — pre-data, pre-freeze). #
+# ============================================================================ #
+model_suite:
+  confirmatory_author: claude-opus-5           # R102 (2026-07-24, Tamer's instruction; SUPERSEDES R91's "the CONFIRMATORY
+                                               #   seat remains claude-opus-4-8 REGARDLESS" clause and R98's budget
+                                               #   deferral): still the ONE frontier (Tamer's rule), native Anthropic API.
+                                               #   Pre-data + pre-freeze, so a legitimate design revision, not a forking path.
+  confirmatory_author_migration: "R102 (2026-07-24): the confirmatory seat moves claude-opus-4-8 -> claude-opus-5. WHY: Opus 5 is GA with a public API id, the vendor now lists Opus 4.8 as LEGACY, and shipping the confirmatory arm on a legacy model contradicts the freshest-strongest-model priority. VERIFIED BEFORE THE SWAP (not assumed): (a) ATTRIBUTION — R91's own gate — a live call returns served model 'claude-opus-5' with NO silent fallback-routing, so the Sakana-Fugu exclusion is satisfied; (b) PRICE IDENTICAL at $5/$25 per MTok, so the R81 $30 ceiling and the ~$28 all-in estimate are UNCHANGED; (c) TOKENIZER unchanged (Opus 4.7 family) so token/cost baselines carry over; (d) SAFETY CLASSIFIERS + refusal semantics IDENTICAL to Opus 4.8 — no NEW treatment-correlated interference channel (this is why Opus 5 is acceptable where the Fable-5 swap was declined on identification grounds); (e) temperature/top_p/top_k still rejected -> the Opus no-temperature convention (R85) is preserved and claude-opus-5 was added to the client's temperature-rejecting list so a stray temperature cannot 400 the run. TWO CONSEQUENT CHANGES: (1) max_tokens 4096 -> 8192 because Opus 5 runs ADAPTIVE THINKING BY DEFAULT and max_tokens caps thinking+response together (the R97a kimi-k3 truncation failure applied pre-emptively to the confirmatory author); (2) Opus 4.8 is RETAINED as an M2 survey datapoint, which also preserves the R92 generation-pair instrument (opus-4.8 <-> opus-5) at M2 resolution. IDENTIFICATION UNAFFECTED: the author model is common to every arm, so arms still vary ONLY the feedback block; what changes is the generalisation target (the reported result now describes Opus 5), stated plainly in CH4/CH7."
+  legs:                                          # 10 replication legs (R95), floor-tier (30 seeds), 5 LLM arms x 30 candidates each
+    - {label: deepseek-v4-pro, id: deepseek/deepseek-v4-pro, license: MIT, reasoning_pin: thinking-disabled, output_cap_tokens: 16384, gate: contamination_screen, fallback: absorbs-to-glm}   # R113 (2026-07-27) gate-evidence cap bump 4096->8192, the R97a/R103 pattern. MEASURED at 4096 (n=10): stop=length 2/10, reasoning_tokens 3378/2775/2196/709/2800/2593/**4096**/1124/**3515**/2935 — on one call the REGISTERED reasoning mode consumed the ENTIRE budget leaving ZERO tokens for code (the R112 GLM signature), and passing calls burned 54-82%, so 4096 was marginal BY CONSTRUCTION (kimi's R97a situation). VERIFIED live at 8192 (n=10): 0/10 truncated, compliance 0.9->1.0, max reasoning 4727 => 3465 tokens of headroom, cost unchanged. BUDGET is the lever, not {enabled:false}, because this leg's reasoning mode is REGISTERED and must be preserved   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: glm-5.2,         id: z-ai/glm-5.2, license: MIT, reasoning_pin: thinking-disabled, output_cap_tokens: 16384}   # R112 (2026-07-26): GLM reasons by DEFAULT and burned the whole 4096 budget on hidden reasoning in ~40% of authoring calls -> EMPTY code (MEASURED 6/10 compliance; reasoning_tokens 3900-4222 at stop=length). Same class as R103; disable VERIFIED live (537 out, 0 reasoning, code authored)   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: qwen3.6-27b,     id: qwen/qwen3.6-27b,  license: Apache-2.0, provider_pin: siliconflow, quantization: fp8, reasoning_pin: thinking-disabled, output_cap_tokens: 16384}   # open pair TOP (dense); R103: reasoning {enabled:false} — siliconflow's DEFAULT thinking mode burned the whole budget -> empty code (0.4/10); disable VERIFIED 0.4->1.0 (pair-invariant with qwen3.5-9b)   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: qwen3.5-9b,      id: qwen/qwen3.5-9b,   license: Apache-2.0, provider_pin: siliconflow, quantization: fp8, reasoning_pin: thinking-disabled, output_cap_tokens: 16384}   # open pair BOTTOM (dense; same provider+quant+reasoning as top — confound-free pair); R103: reasoning {enabled:false} VERIFIED 0.0->1.0   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: haiku-4.5,       id: claude-haiku-4-5-20251001, license: closed, note: dated-snapshot, reasoning_pin: thinking-disabled, output_cap_tokens: 16384}                       # closed ladder BOTTOM   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: gpt-5.6-luna,    id: openai/gpt-5.6-luna, license: closed, reasoning_pin: thinking-disabled, output_cap_tokens: 16384, note: cross-vendor closed; no dated snapshot (disclosed)}   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: nemotron-3-super, id: nvidia/nemotron-3-super-120b-a12b, license: NVIDIA-Open-Model-License, note: major portions of training data released (some gated) — phrase exactly, reasoning_pin: thinking-disabled, output_cap_tokens: 16384}   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: sonnet-5,        id: claude-sonnet-5, license: closed, note: R90/R92 — the LATEST-GENERATION seat (released 2026-06-30; the former pair partner sonnet-4.6 was removed on Tamer's instruction, so the generation-pair instrument is now the conditional Opus pair), reasoning_pin: thinking-disabled, output_cap_tokens: 16384}   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: gemini-2.5-flash, id: google/gemini-2.5-flash, license: closed, output_cap_tokens: 16384, role: STRETCH-truncates-second-after-kimi-k3 (R95), note: R103 (2026-07-25) output cap 2048->8192 on repro-gate evidence — mandatory (non-disablable) thinking consumed the 2048 cap -> EMPTY authored code (0.1/10 compliance); reasoning CANNOT be disabled ("Reasoning is mandatory for this endpoint", verified) so the lever is BUDGET (R97a-kimi pattern), 8192 VERIFIED 0.1->1.0; reasoning-at-provider-default still DISCLOSED and the smoke archives reasoning-token usage (capture now IMPLEMENTED) + served provider as the record, reasoning_pin: thinking-disabled}   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+    - {label: kimi-k3,         id: moonshotai/kimi-k3-20260715, license: closed-until-weights, output_cap_tokens: 16384, reasoning_pin: thinking-disabled, note: "R112 (2026-07-26) SUPERSEDES the always-on-thinking disclosure for this leg: the premise was FALSE — kimi CAN disable thinking (mapped 2026-07-25, re-VERIFIED live 3/3: 0 reasoning tokens, ~550 output tokens, code authored). The R97a 4096->8192 bump was insufficient (3/12 calls still spent the WHOLE 8192 on hidden reasoning -> stop=length, EMPTY code; a PASSING call used 7004, so the cap was marginal by construction), so the lever is DISABLE not a bigger budget; the 8192 cap is retained as headroom and this leg's cost falls ~15x. ORIGINAL R97a note follows || R97a gate-evidence cap bump 2026-07-23 (4096 truncated 5/10 compliance calls under always-on thinking; the freeze-gate cross-check now binds this value) — R95 (2026-07-22) — seated NOW as a closed-class leg via OpenRouter (the CANONICAL DATED slug, stronger pinning than Luna/Gemini); always-on thinking disclosed; the vendor-promised 2026-07-27 open weights UPGRADE it to open-class by the pre-declared rule (fill hf_pin + license at that point, a dated amendment by rule); LAST in queue — truncates first"}   # R106 (2026-07-27) UNIFORM REASONING-OFF + MATCHED CAPS - ratified 2026-07-26 by Tamer AND Okhrati (ratification pack item 8) and IMPLEMENTED here; the sign-off was recorded in prose but the item was dropped from ratification_completed and never reached the config. Reasoning off on EVERY leg removes the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) and makes the suite comparable; caps matched at 16384 (8192 at first landing, RAISED the same day on the measured utilisation -- the Opus author used 78% of 8192, inside the 54-82% marginal-by-construction band deepseek's truncation defined; never lowered) close the ledger's HIGH fragility 'Haiku 4096/no-reasoning vs Opus-5 8192 -> the DiD conflates capability with token-budget/thinking'.
+  queue_order: [deepseek-v4-pro, glm-5.2, qwen3.6-27b, qwen3.5-9b, haiku-4.5, gpt-5.6-luna, nemotron-3-super, sonnet-5, gemini-2.5-flash, kimi-k3]   # R106: gemini-3.5-flash -> gemini-2.5-flash (3.5's reasoning is MANDATORY per OpenRouter 400, so it could not join a uniform-off suite; the substitute was verified 2026-07-25 and re-verified live 2026-07-27)
+  generation_pair: "R92 (2026-07-21, supersedes R90's sonnet pair — sonnet-4.6 removed on Tamer's instruction): the generation-pair instrument survives ONLY as the CONDITIONAL Opus pair (opus-4.8 <-> opus-5 per conditional_seat_opus_5); if R91's rule does not fire, the design carries the two capability pairs and no generation pair (disclosed)"
+  kimi_k3_upgrade_rule: "R95 (supersedes the R90/R93 conditional SEAT — K3 is now SEATED outright as leg 10): IF the vendor-promised open weights land with a permissive license (2026-07-27) on/before the LAUNCH-GO day, the leg upgrades to OPEN-class (hf_pin filled from the official HF card; license recorded) by this pre-declared rule; ELSE it runs as a closed-API leg on the dated snapshot, disclosed exactly like the other closed legs"
+  conditional_seat_opus_5: "R91 (rule-driven, pre-declared — never results-contingent; leak-stage as of 2026-07-21, no API id exists): IF an Opus-lane successor (claude-opus-5) reaches GA with a public API id on/before the LAUNCH-GO day (R93: window re-anchored pre-freeze, same rationale as the K3 seat) AND passes the leg gates AND single-author ATTRIBUTION is verifiable (the leaked spec mentions a safety fallback routing to opus-4.8 on trigger — every gate call's served-model metadata must identify opus-5, and any silent fallback-routing FAILS the seat on the Sakana-Fugu exclusion principle), THEN claude-opus-5 joins as a stretch leg forming the SECOND generation pair (opus-4.8 <-> opus-5, mirroring the sonnet pair) after sonnet-5 in the queue; the CONFIRMATORY seat remains claude-opus-4-8 REGARDLESS (a days-old model in the seat that gates H1-H4 fails the registered stability bar; opus-4.8's retirement-floor + weight-preservation commitments are unaffected by a successor's existence)"
+  conditional_seat_opus_5_budget: "R98 (2026-07-23, Tamer's stated decision 'I dont have money for both opus 4.8 and opus 5', twice-affirmed): the R91 seat's FULL-LEG form is NOT EXERCISED this cycle on budget grounds even if the R91 conditions fire; the pre-declared maximum Opus-5 footprint is the ~$1 M2 reading-survey seat (a dated capability datapoint) IF GA lands on/before freeze day, else the disclosure sentence. The full-leg generation pair moves to future work (Papers 2/3). Rule-governed, dated, decided PRE-event — not results-contingent."
+  queue_semantics: "R88 (2026-07-21): the queue order is realized as a SCHEDULER PRIORITY LADDER (core search/floor/tier-100 above the legs; legs -200..-280 in queue order; tier-189+ below the legs) — execution may OVERLAP across legs and rungs, but COMPLETION and calendar-gate TRUNCATION order follow the ladder, i.e. exactly the pre-declared queue. Ops-only: no seed, arm, budget, or stopping rule changes || R101 (2026-07-24, Okhrati SEED-PARITY directive, CONFIRMED by Tamer): the model-vs-model ordering is SUPERSEDED — all 11 full-loop models (Opus + 10 legs) climb ONE common assurance ladder in LOCKSTEP at EQUAL winner-re-run priority; no model is privileged with more seeds. R88's ladder now governs only search/floor vs assurance-rung ordering, not Opus-above-legs. The launcher/priority config change is GO-prep. See R101."
+  # R85 (2026-07-21): reproducibility-permanence pins + decoding-uniformity (closing the gap      #
+  # between the ADOPTED sweep mechanics (MODEL_SWEEP §4.1 "open legs pin by HF commit hash")      #
+  # and the executed config, which carried provider/quant pins but NO weights hashes).            #
+  hf_pins_recorded: {deepseek-v4-pro: "deepseek-ai/DeepSeek-V4-Pro@b5968e9190ef611bbf34a7229255be88a0e937c1", glm-5.2: "zai-org/GLM-5.2@b4734de4facf877f85769a911abafc5283eab3d9", qwen3.6-27b: "Qwen/Qwen3.6-27B@6a9e13bd6fc8f0983b9b99948120bc37f49c13e9", qwen3.5-9b: "Qwen/Qwen3.5-9B@c202236235762e1c871ad0ccb60c8ee5ba337b9a", nemotron-3-super: "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16@d51eab0d1f979ebc26b546e634a04f450d99158e"}   # R93: retrieved 2026-07-22 from the official HF API; the HASH-BOUND authority (legs.yaml mirrors); nemotron's public weights artifact is the BF16 repo (the base slug is gated)
+  hf_weights_pins: "REQUIRED for every open-weight leg BEFORE the v2 freeze: the Hugging Face repo id + commit hash of the exact weights release, retrieved at gate time from the model's official HF card (never inferred), archived with the gate verdicts, and mirrored into config/legs.yaml. The weights hash is the PERMANENT artifact behind the reproducibility claim — hosted API routes are transient; anyone can re-host the pinned weights"
+  served_variant_disclosure: "the Qwen pair is SERVED fp8 (SiliconFlow) — the authoring artifact is the fp8-served variant of the hash-pinned bf16 weights; the pin + provider + quantization TOGETHER define the executed author (one methods sentence; never claim the bf16 weights authored)"
+  temperature_policy: "OpenRouter legs pin temperature=1.0 explicitly (uniform — different providers DEFAULT differently, an uncontrolled nuisance axis across legs that the prior 'provider default, recorded' wording could not actually record); models that REJECT the parameter fall back to provider default, disclosed per leg from the gate smoke. Anthropic legs keep the Opus convention (no temperature param; prompt-variation diversity). Within-leg contrasts are temperature-common-mode, so arm comparisons are unaffected either way"
+  reasoning_pin_evidence: "every reasoning pin must ROUND-TRIP: the gate smoke archives the response's reasoning-token usage + served provider as evidence the pin functioned (a pass-through key an API silently ignores is a fictional pin; a 400 fails the smoke loudly). DeepSeek think-high = the vendor DEFAULT, so even a silently-ignored pass-through yields the registered mode. SCHEMA MIGRATION 2026-07-23 (gate catch): the provider renamed the mode values to standard/pro; the pin is now mode: pro, the SAME registered vendor-default thinking mode under its new API name; round-trip usage at the gate = the proof of service. R103 IMPLEMENTATION (2026-07-25): the round-trip is now REAL, not merely claimed — client.py captures usage.completion_tokens_details.reasoning_tokens (+ response.provider) into every provenance record, and leg_gates.py computes a DIRECTION-AWARE verdict: an ENABLE pin (mode/effort) yielding 0 reasoning tokens on the authoring calls = FICTIONAL->review; a DISABLE pin ({enabled:false} — the new qwen-pair thinking-off) yielding >0 reasoning tokens = IGNORED->review; and a leg below the 0.5 compliance floor is flagged review (was silently 'pass'). The prior wording CLAIMED this capture; the 2026-07-25 repro-audit found reasoning_tokens were dropped, and it is now landed"
+  leg_seed_tier: 30                              # R101 (2026-07-24, Okhrati SEED-PARITY CONFIRMED): REINTERPRETED — 30 is the GUARANTEED COMMON FLOOR rung that ALL 11 full-loop models (Opus + every leg) bank in LOCKSTEP; the achieved common rung by the Aug-27 exogenous stop is >=30 (fair-share expectation ~100-189), NOT a leg-only cap. (Was: "legs run at the floor tier ONLY.") check_rung_freshness.py reads 30 as the floor tier — still valid.
+  exogenous_stop: "2026-08-27"                   # ★ THE STOP RULE, mirrored 2026-07-26 (deep review, loop 14). R100/R101
+                                                 # pre-commit the exogenous stop to this CALENDAR date ("throughput-only,
+                                                 # never results-contingent; GO-day may move it EARLIER, never later"),
+                                                 # and it is the rule that fixes the achieved common rung -- i.e. the
+                                                 # study's effective n, hence its power. It existed ONLY as register
+                                                 # prose: a repo-wide search found ZERO occurrences of 2026-08-27 in
+                                                 # config/. That is a registered NAME with no registered VALUE, exactly
+                                                 # the R84 forking-path lesson, on the most power-determining rule in
+                                                 # the design. Mirrored here so the machine config states it.
+  leg_calendar_gate: "2026-08-27"                # RECONCILED to the exogenous_stop 2026-07-26 (config-only field, not code-read; R101 uniform lockstep stop).
+                                                 # ✓ RECONCILED 2026-07-26 to the exogenous_stop (was flagged 2026-07-26, deep
+                                                 # review loop 6; NOT changed unilaterally -- it is a design call for
+                                                 # Tamer/Ramin). R101 makes the stop UNIFORM: all 11 full-loop models
+                                                 # climb ONE common ladder in lockstep and bank the SAME rung at the
+                                                 # 2026-08-27 stop, which leaves no room for a separate, EARLIER
+                                                 # leg-only truncation gate. Either this date moves to 2026-08-27, or
+                                                 # the gate must be re-described as something other than a stop (e.g. an
+                                                 # interim reporting checkpoint). RESOLVED via option a -- aligned to 2026-08-27
+                                                 # (the R81 interim report ~Aug 6-8 is the distinct mid-campaign milestone). Tamer+Okhrati ratified, full-freedom authorisation 2026-07-26.
+  prompts: byte-identical-across-all-legs        # the treatment text is ONE instrument (R79 format pass included)
+  diversity: prompt-variation-unified            # ALL legs use the R38-de-seeded prompt-variation protocol; temperature pinned per temperature_policy above (OpenRouter legs = 1.0 explicit; Anthropic = the no-temperature Opus convention) — NOT "provider default" (R85 rejected that as un-recordable; m4 comment fix 2026-07-25)
+  rolling_alias_ban: true                        # "~vendor/*-latest" ids are rejected by the transport
+  stage2_triggers:                               # rule-driven only; never mid-flight
+    - {model: kimi-k3, condition: "open weights + permissive license land (promised 2026-07-27) + gates pass -> post-campaign Stage-2 leg"}
+    - {model: kwaipilot-kat-coder, condition: "open weights + verified coding benchmarks -> M2 promotion / Stage-2 candidate"}
+  spend_ceiling_usd: 30                          # ADVISORY planning ceiling (R83 softening, Tamer 2026-07-21): tracked + reported, WARNS at thresholds, NEVER refuses — spend decisions are the researcher's; the exogenous stops are the seed-rung rule + the calendar gate
+  spend_priority: [opus-confirmatory, legs-in-queue-order, m2-open-models, m2-closed-models]   # the execution/reporting order (advisory; no automatic trimming)
+  synthesis:                                     # pre-registered cross-leg synthesis (report-only)
+    sign_count: descriptive                      # cross-leg replication count reported DESCRIPTIVELY (legs share panel+CRN seeds -> not independent)
+    permutation_test: "per shared CRN seed, flip the (distributional<->scalar) assignment with p=0.5 SIMULTANEOUSLY across all legs; STATISTIC = the POOLED MEAN difference over included legs (the multivariate paired sign-flip test; refined pre-freeze 2026-07-21 — a sign-COUNT statistic is near-powerless under joint flips with correlated legs, unanimity being routine under that null; the sign count remains the DESCRIPTIVE layer); 10,000 reps, one-sided toward dist-safer (shared-seed/panel dependence lives inside the null)"
+    # R84 (2026-07-21): the capability anchor CONCRETELY pre-declared — a rule, not a choice.  #
+    capability_anchor:
+      # ★ DOWN-RANK REGISTERED 2026-07-26 (ratification item 7b; Tamer + Okhrati). The retrieval rule
+      # below is discretion-free and yielded values for only 2 of the 10 legs, so the "primary capability
+      # regression" is a line through TWO points: zero residual degrees of freedom, no estimable slope
+      # uncertainty, no testable gradient. The FALLBACK was already pre-declared (secondary M2 + tertiary
+      # ordinal pairs), so nothing was hidden -- but the register called this instrument PRIMARY while
+      # docs/VALIDITY_TIER_DESIGN_2026-07-26.md called it DEAD and proposed a down-rank that was
+      # registered NOWHERE. R87's falsifiability cannot rest on a non-estimable regression, so the
+      # hierarchy is now stated explicitly rather than left contradictory.
+      instrument_hierarchy_for_r87:
+        primary: [family_pair_did_qwen_9b_27b, family_pair_did_haiku_opus, m2_probe_grid]   # the IDENTIFIED estimates + the probe grid carry R87's decision
+        descriptive_only: swe_bench_verified_regression   # retained and reported, but NOT a decision instrument at n=2
+        rationale: "2 of 10 legs carry a card-published SWE-bench-Verified score under the discretion-free rule (glm-5.2 publishes SWE-bench-PRO; deepseek-v4-pro's circulating 80.6 is the MAX-mode figure our pinned pro-mode leg does not use; sonnet-5/qwen3.5-9b/nemotron/gemini-flash publish none; gpt-5.6-luna documented ABSENT). A 2-point regression has no residual df, so reading a GRADIENT off it would be an artefact. The pair DiDs are the CONTROLLED capability instrument (within-family, everything else held) and were always the identified estimates -- this makes the register say so."
+        never_imputed: true                    # the discretion-free rule stands: a missing score is MISSING, never imputed, never swapped for a different benchmark
+      primary: swe_bench_verified            # ONE named benchmark (the lineage-standard coding axis) -- see instrument_hierarchy_for_r87 above: DESCRIPTIVE since the 2026-07-26 down-rank
+      # ⚠ ESTIMABILITY, stated plainly (deep review 2026-07-26, loop 7). The discretion-free retrieval rule
+      # below yielded values for only 2 of the 10 legs, so the "primary capability regression" is a line
+      # through TWO points: zero residual degrees of freedom, no estimable slope uncertainty, no testable
+      # gradient. The FALLBACK is genuinely pre-declared in `primary_rule` + `values_at_freeze` (secondary
+      # M2 + tertiary ordinal pairs carry the rest), so nothing here is hidden — but calling this instrument
+      # "primary" while it cannot be estimated overstates it, and R87's falsifiability therefore rests in
+      # practice on the two family-pair DiDs + the M2 probe grid, NOT on this regression.
+      # `docs/VALIDITY_TIER_DESIGN_2026-07-26.md` reaches the same conclusion ("the anchor is DEAD (2/10
+      # legs)") and PROPOSES down-ranking it to the pair-DiDs — but that down-rank is registered in NO
+      # amendment row and NO key here, so the register and the design doc currently disagree. Registering
+      # the down-rank is a design change (Tamer/Ramin), so it is SURFACED here rather than made silently.
+      primary_rule: "value = the SWE-bench-Verified score published on the model's official card / vendor announcement as of the retrieval date below; a model with NO such published score is MISSING — excluded from the primary regression and reported under the secondary anchor instead (never imputed, never swapped for a different benchmark)"
+      retrieval: {date: "2026-07-20 (MODEL_SWEEP_2026-07-20_v2) re-verified at gate time pre-freeze", archive: "per-model source URL + score archived with the gate verdicts"}
+      values_at_freeze: {qwen3.6-27b: 77.2, haiku-4.5: 73.3}         # R93 (retrieval 2026-07-22, rule applied discretion-free): ALL OTHER LEGS = MISSING under the primary rule — glm-5.2 publishes SWE-bench-PRO not Verified; deepseek-v4-pro's circulating 80.6 is the MAX-mode figure while our leg pins the pro mode (nee think-high, vendor-renamed 2026-07-23; conflation refused - the sweep register warned exactly this); sonnet-5/qwen3.5-9b/nemotron/gemini-flash have no card-published SWE-V; gpt-5.6-luna documented ABSENT -> the primary regression runs on the available points and the registered secondary (M2) + tertiary (ordinal pairs) carry the rest, as pre-declared
+      secondary: m2-reading-score            # OUR instrument — shares method variance with the outcome (circularity DISCLOSED; that is why it is secondary, never primary)
+      tertiary_descriptive: within-family-ordinal   # parameter/tier order inside each family pair (9B<27B; Haiku<Sonnet<Opus) — benchmark-free, zero missing; embodied by the pair contrasts
+    # R87 (2026-07-21): the gradient prediction made FALSIFIABLE — three rival signatures named   #
+    # ex-ante (the prior wording "monotone non-decreasing" was satisfied by BOTH a flat and a     #
+    # rising gradient — near-unfalsifiable — and named the RIVAL account's signature, not ours).  #
+    gradient_signatures:
+      capacity_account: "responsiveness RISES with capability (weak authors fail to use the numbers; strong ones use them)"
+      representational_account: "responsiveness FLAT at ~0 across capability — THE REGISTERED PREDICTION of the numeracy-bottleneck headline (the bottleneck is the numeric REPRESENTATION, so it binds every author incl. the frontier; the legibility/guided-comparison probes, not capability, are the predicted levers)"
+      echo_account: "responsiveness DECREASING in capability (weaker models surface-echo fed numbers without using them)"
+      decision: "read off jointly from the capability regression + both family-pair DiDs + the M2 probe grid; the fingerprint accounts A1-A5 adjudicate as registered"
+    sonnet_bridge_prediction: "WITHDRAWN pre-data by R92 (2026-07-21): the prediction was defined on the pilot's author (sonnet-4.6), whose leg was removed on Tamer's instruction; no re-scoping to another model (that would dilute the ex-ante falsifiability). The withdrawal is dated and pre-data — the prototype remains engineering-only evidence"
+    pair_contrast: "the content-effect x capability interaction, estimated within BOTH family pairs (Qwen 9B/27B open; Haiku/Opus closed) — the controlled capability instrument; the cross-family regression is DESCRIPTIVE (n=10 legs carries no meaningful test power) — the pair DiDs are the identified estimates"
+  reliability_metrics: [format_compliance_baseline, sandbox_pass_rate, contract_violation_taxonomy, refusal_truncation_rates, code_diversity, per_model_taxonomy]
+  feedback_protocol: "Supervisor and industry feedback received after launch informs presentation and interpretation ONLY; data-collection decisions (rungs, legs, stops) follow the pre-registered exogenous rules exclusively."
+  interim_report: {when: floor-bank (~2026-08-06/08), to: [Dr-Okhrati, industry-supervisors], content: floor-tier-results (labeled provisional) + draft mechanism chapter + design record, effect-on-data-collection: none}
+  # --- R82 supplement (2026-07-20 late night; the completeness pass) ------------------------- #
+  max_tokens_pins:                               # ★ R106 (2026-07-27): a SINGLE UNIFORM CAP — the per-class scheme and its three exceptions are SUPERSEDED
+    # THE CAP IS NOW ONE NUMBER FOR EVERY LEG: 8192. History of how we got here (each was a
+    # gate-evidence bump on a leg whose hidden reasoning ate the budget): R97a kimi 4096->8192 ·
+    # R103 gemini 2048->8192 · R113 deepseek 4096->8192. R106 finishes the job by RAISING the rest to
+    # match rather than lowering anyone (Tamer 2026-07-27: "try not to lower the cap if you can"), so
+    # no leg loses headroom and the capability contrasts stop being confounded by budget — the
+    # ledger's HIGH fragility "Haiku (4096, no reasoning) vs Opus-5 (8192) -> the DiD conflates
+    # capability with token-budget/thinking". Cost is unaffected: billing is on tokens GENERATED, not
+    # on the cap, and with reasoning off the completions are SHORTER (measured: reasoning-off legs use
+    # 1210-2969 output tokens). Every leg row carries output_cap_tokens: 16384, which is the value
+    # freeze.py actually enforces against config/legs.yaml.
+    uniform_all_legs: 16384                       # R106: applies to all 10 legs AND the Opus confirmatory author (config/llm.yaml)
+    open_legs: 16384                              # RETAINED as a class label for readability; equal to uniform_all_legs by R106
+    capped_closed: 16384                          # was 2048 (gpt-5.6-luna) - RAISED to the uniform cap, never lowered
+    anthropic_legs: 16384                         # was 4096 (haiku-4.5, sonnet-5) - RAISED; this is exactly the leg pair the DiD confound named. ⚠ 2026-07-26 deep review: the old
+                                             # parenthetical "opus = v1 convention unchanged" is FALSE since
+                                             # R102 — the confirmatory Opus author runs at the R106 uniform cap 16384
+                                             # (config/llm.yaml), NOT this 4096 leg pin.
+  leg_gate_timestamp: "2026-08-27T23:59:00Z"     # RECONCILED 2026-07-26 to the uniform stop (was Aug-14; aligned with leg_calendar_gate under R101)
+  synthesis_exactness:                           # closes the ambiguities a referee could exploit
+    sign_count_statistic: cvar_leg_contrast      # the tail (CVaR-5%) dist-vs-scalar sign — the Sharpe leg is predicted-tie for every model, so counting it would count noise
+    leg_inclusion_criterion: "a leg enters the sign count ONLY if its winners clear the T0 naive-benchmark floor in BOTH contrasted arms; failing legs report in the reliability table as authoring/search failures (a finding), never as votes"
+    # R84 (2026-07-21): the floor VALUE pinned (was named-but-unpinned — 8 registered benchmarks   #
+    # would each give a different floor -> a different inclusion set -> a forking path).           #
+    t0_floor_definition: "floor = the EQUAL-WEIGHT benchmark's mean per-seed Sharpe over the common floor seeds 0-29, computed from the shared core baseline records (equal_weight is the canonical naive allocator; the same records every leg is compared against)"
+    t0_filter_size_note: "the inclusion filter is ARM-SYMMETRIC (both arms must clear the same floor), so it preserves the sign-flip symmetry of the null — filtering cannot bias the permutation test's size (registered so the selection-then-test question is answered ex-ante)"
+    # R86 (2026-07-21): the BOUNDED-EFFECT statement — the synthesis's equivalence-first tier      #
+    # (a large permutation p alone is absence-of-evidence; per-leg TOSTs at the 30-seed floor are  #
+    # inconclusive by construction — pooling the legs' paired seeds is where the precision lives). ⚠ 2026-07-26
+    # deep review: this said "9 x 30", but BOTH numbers are superseded — R95 seated the 10th leg, and R101
+    # retired the 30-seed floor (all 11 climb one common ladder), so the pooled n is 10 legs x the achieved
+    # common rung, not 9 x 30.    #
+    pooled_bound: "the 90% seed-block-bootstrap CI on the pooled mean (dist - scalar) CVaR-5% difference over included legs (resample seed indices i.i.d., the SAME draw applied to every leg — dependence-honest), reported in daily-return units AND as a percentage of the scalar-arm pooled CVaR level; this CI is the registered cross-model bounded-effect statement"
+    leg_tost_family: "the 10-leg report-only TOST family (R95) = the per-leg CVaR-5% dist-vs-scalar contrasts (the Sharpe leg is predicted-tie); BH within this family for any starred statement"
+    pair_contrast_estimator: "(dist - scalar)_top_rung_member - (dist - scalar)_bottom_member, computed on the COMMON floor-30 CRN seed subset for BOTH family pairs (Qwen 9B/27B; Haiku/Opus — Opus restricted to its first 30 shared seeds for the paired estimator), seed-paired bootstrap CI"
+    leg_family_correction: "BH across the 10-leg (R95) report-only TOST family for any starred statement"
+  m2_extension_optional:                         # R96 (2026-07-22): the OPTIONAL psychometric module — registered-but-NOT-activated
+    spec: docs/M2_EXTENSION_OPTIONAL_SPEC_2026-07-22.md   # the full pre-specification (both axes, estimands, threats, costs)
+    axis_a: "per-model discrimination thresholds for the 11 full-loop models: 2AFC graded-delta ladder (7 log-spaced levels x 20 items, ecological archive-jittered stimuli, catch trials + positive controls + the adversarial digit-length stratum + the 2x2 format/instruction threshold-shift subsets), logistic psychometric fit -> delta-75 JND per model with bootstrap CI; THE OVERLAY estimand = the share of realized campaign fed deltas below each model's threshold (the mechanism closure); ~300 calls/model, ~$8-12 total"
+    axis_b: "the ecosystem map: the FULL eligible frame of the archived OpenRouter census (~100-130 distinct bases after the registered dedup/inclusion rule — a census, not a sample) on a calibrated 68-call short form (psychometric linking through the 11 dual-form models); estimands = the threshold CDF, threshold-vs-release-date trend, threshold-vs-price (the practitioner curve), within-family scaling ladders, the n~100 reading-capability regression; ~$15-25"
+    activation: "TAMER'S dated write-time decision on resource/scope grounds (recorded as an amendment); IF ACTIVATED, ALL pre-specified estimands report in full — the all-or-nothing clause makes activation timing incapable of biasing publication; report-only, disjoint keys, zero GPU, post-headline, budgeted as a SEPARATE P2-module line (the campaign remains the ~$30 study)"
+  m2_probes:                                     # protocol extensions (report-only, ~$3 total)
+    guided_comparison: "identical stimuli + ONE added instruction sentence ('explicitly compare each fed value against the previous attempt's before revising') — separates CANNOT-read from WILL-not-use; with the legible-format probe forms the 2x2 format x instruction grid"
+    responsiveness_positive_control: "~20 stimuli whose blocks carry OVERT directive content ('penalize turnover more heavily') where responsiveness MUST fire — proves the SQ1 metric's sensitivity, sealing a responsiveness null against the broken-instrument critique"
+  additional_registered_cuts:
+    generation_indexed_responsiveness: "SQ1 recomputed per generation (1..6) from existing archives — does the model LEARN to use feedback within the loop? (zero new compute)"
+    search_replicate: "Stage-2: ONE full 30-candidate search replicate on the qwen3.5-9b leg (~150 trainings) — the lineage's first direct estimate of authoring-search variance (upgrades limitation B.2.6 from disclosed to quantified)"
+  freeze_day_checklist_additions:
+    public_deposit: "at the v2 freeze: deposit the prereg bundle PUBLICLY (OSF or Zenodo, DOI'd) — the public timestamp anchor referees can verify (the private-repo tag/bundle/OpenTimestamps remain the internal chain)"
+  per_leg_bank_gates: "each leg archive root passes the same write->verify integrity gate as the campaign root BEFORE its numbers enter any table"
+  theory_bridge: "the capability gradient TRACES the envelope-realization gap as a function of author capability, g(capability): the Blackwell envelope binds every user; the suite measures the realized distance to it along the capability axis; the numeracy bottleneck is the registered hypothesized shape of g (CH3/CH7 paragraphs at write time)"
