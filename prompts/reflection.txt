@@ -1,0 +1,27 @@
+# ============================================================================================
+# ARCHIVED / DEAD FILE — NOT LOADED AT RUNTIME, NOT PART OF THE FROZEN DESIGN (R63, 2026-06-28).
+# This template is illustrative ONLY. No code path substitutes its {SCALAR_METRIC}/{ARM_BLOCK}
+# markers: both run paths (src/llm/loop.py, src/orchestration/parallel.py) compose every
+# reflection turn IN CODE from `_REFLECTION_PREAMBLE` (src/llm/prompts.py) + the per-arm block
+# rendered by `src/feedback/schema.build_block`. It is therefore EXCLUDED from the freeze hash
+# (only prompts/system.txt + prompts/initial_generation.txt are bound — see scripts/freeze.py
+# `_BOUND_TREATMENT`). Kept here for documentation; do NOT infer the live treatment from it.
+# ============================================================================================
+# Reflection prompt (NOT loaded at runtime — illustrative; the live reflection is built in
+# src/llm/loop.py + src/feedback/schema.py). {ARM_BLOCK} is rendered by src/feedback/schema.py
+# and is the ONLY thing that
+# differs across the five LLM arms (distributional / scalar / placebo / scalar_cvar5 / placebo_shuffled). All blocks
+# share the same structure/length so the comparison isolates information, not token-count.
+
+Your previous reward scored: {SCALAR_METRIC} (validation Deflated Sharpe).
+
+{ARM_BLOCK}
+# distributional -> the realized-return tail-diagnostic lines (CVaR 5/10/25%, CVaR 1% [high-variance],
+#                   left-tail mass, left-tail skew), measured on the TRAINING-period realized returns;
+# scalar_cvar5   -> exactly one extra line: "CVaR 5%: <value>";
+# placebo        -> an inert block matched to the distributional block in line-count and length;
+# placebo_shuffled -> distributional's EXACT block with the tail VALUES deranged (structure-vs-content control).
+# scalar         -> nothing extra.
+
+Revise the reward function to improve risk-adjusted out-of-sample performance.
+Return ONLY the function definition.

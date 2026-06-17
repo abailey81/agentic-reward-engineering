@@ -1,0 +1,16 @@
+Here is the environment interface and the reward contract.
+
+{ENV_INTERFACE}        # observation/action shapes, the step semantics, the contract signature
+
+Write a reward function for the portfolio-allocation agent. Think about:
+  - risk-adjusted return (not raw return alone),
+  - turnover/transaction cost.
+The feedback you receive after each attempt is what should steer how you shape risk.
+
+A trivial example that satisfies the contract:
+
+    def reward(weights, returns, prev_weights, port_ret, info):
+        return float(port_ret), {"port_ret": float(port_ret)}, None
+
+Respond with a single Python code block containing ONLY your reward function definition — no
+prose before or after the code.
