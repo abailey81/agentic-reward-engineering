@@ -1,0 +1,26 @@
+# Light, CI-friendly subset that runs the DETERMINISTIC core test suite (no torch/SB3/GPU).
+# The full training/LLM paths need the heavier deps in pyproject.toml.
+numpy>=1.26,<2.0
+scipy>=1.11
+scikit-learn>=1.3
+pandas>=2.1
+pyarrow>=15                # parquet engine for the gold-panel loader (src/data/loaders.py, market_reference)
+                          #   exercised by the deterministic data tests (test_loaders*, test_market_reference,
+                          #   test_embargo_splits, test_data_deep). CPU-only.
+statsmodels>=0.14
+gymnasium>=0.29
+psutil>=5.9                # CPU/RAM probe used by the parallel scheduler's max_power_config (test_max_power);
+                          #   monitoring samples it lazily/best-effort, but that test imports it at module top.
+arch>=7.0                  # StationaryBootstrap/optimal_block_length + MCS oracle used by the deterministic
+                          #   inference tests (test_inference_crosscheck, test_model_confidence_set) AND the
+                          #   figure-engine demo (scripts/make_figures.py -> MCS). CPU-only, no torch.
+matplotlib>=3.8           # the report-only figure engine (src/viz, scripts/make_figures.py) + tests/test_viz.py.
+                          #   CPU-only; learning_curve.py imports it lazily, but test_viz needs it at import.
+pyyaml>=6.0
+pytest>=9.0.3             # match pyproject.toml (>=9.0.3 closes CVE-2025-71176 insecure /tmp perms; 2026-07-05)
+pytest-cov>=5.0
+pytest-randomly>=3.15,<5  # HARD dep (pyproject): shuffle order + reseed per test; its absence here silently
+                          #   ran the CI light job UNSHUFFLED, defeating the order-determinism guard (2026-07-05)
+pytest-timeout>=2.3       # the per-test ceiling the pyproject comment promises (wired via --timeout below)
+hypothesis>=6.100          # property-based / metamorphic core tests (tests/test_properties.py)
+mutmut==2.5.1              # mutation-testing rigor exhibit (scoped to core modules) — dev-only, NOT a runtime dep

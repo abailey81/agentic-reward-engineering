@@ -1,0 +1,141 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-reward-engineering"
+version = "1.0.0"
+description = "Agentic reward engineering with multi-level tail-risk feedback for risk-sensitive deep-RL portfolio allocation (MSc dissertation, UCL Institute of Finance and Technology)."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"  # 3.11/3.12 (the <3.13 cap is a CI-matrix choice, NOT a d3rlpy
+                                  # requirement -- d3rlpy is an isolated extra; ADR-026 revised 2026-06-19)
+license = { text = "MIT" }
+authors = [{ name = "Tamer Atesyakar" }]
+
+# Versions are PINNED for reproducibility. The hard constraint is the
+# torch <-> d3rlpy 2.8.1 compatibility; confirm the exact torch build in the
+# Phase 0 smoke test on the RTX 4090 and record it in provenance/DECISION_LOG.md.
+dependencies = [
+    "numpy>=1.26,<2.0",
+    "pandas>=2.1,<3.0",           # pandas 3.0 breaks arch 7.2.0 (deprecate_kwarg sig) under the numpy<2.0
+                                  #   pin, and the repo code targets pandas 2.x. Capped for the env (ADR-026).
+    "scipy>=1.11",
+    "scikit-learn>=1.3",          # Ledoit-Wolf shrinkage, clustering for HRP; GP-EI surrogate (H4b control)
+    "cma>=4.0,<5.0",              # CMA-ES over the reward template — H4 DFO comparator (evolution-strategy
+                                  #   paradigm; Hansen & Ostermeier 2001). Report-only black-box control the
+                                  #   LLM must beat; PARALLEL-by-design (population), so off the GP-EI critical
+                                  #   path. Installed build: 4.4.4 (src/search/dfo_toolkit.py). BSD.
+    "optuna>=4.0,<5.0",          # TPE over the reward template — H4 DFO comparator (density-ratio paradigm;
+                                  #   Bergstra et al. 2011 via Akiba et al. 2019). Sibling of the GP-EI control;
+                                  #   low-budget-friendly. Installed build: 4.9.0. MIT.
+    "pyyaml>=6.0",
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.4,<2.9",  # SAC (headline), PPO, TD3. Capped <2.9: SB3 2.9 *requires* torch>=2.8, but
+                                    #   the validated GPU build is torch 2.6.0+cu124 (ADR-030/032). 2.8.x has SAC.
+    "sb3-contrib>=2.4,<2.9",        # TQC (secondary distributional-critic experiment, A-2); lockstep w/ SB3 minor.
+    "torch>=2.6,<2.9",              # validated build: torch 2.6.0+cu124 (RTX 4050 dev + rented 4090; ADR-030/032).
+                                    #   Install the CUDA wheel via the cu124 index; record the exact build in the lock.
+    "anthropic>=0.69",            # PRIMARY LLM transport: Claude Sonnet 4.6 reward-author (ADR-016/033).
+    "openai>=1.30",               # OpenAI-compatible transport for the N3 / DeepSeek-V4 check model only.
+    "tenacity>=8.2",              # LLM-transport retry/backoff (ADR-034 wiring; SDK max_retries=0, tenacity owns it).
+    "matplotlib>=3.8",
+    "statsmodels>=0.14",          # bootstrap / inference helpers
+    "arch>=7.0",                  # StationaryBootstrap + optimal_block_length used as a TESTS-only cross-check
+                                  #   oracle for src/inference/bootstrap.py (tests/test_inference_crosscheck.py);
+                                  #   NOT imported in src/. PREREG §10.
+    # rliable DROPPED 2026-06-19 (ADR-032): upstream archived 2025-10; src/inference/reporting.py already
+    # reimplements its IQM / prob-of-improvement / stratified-bootstrap-CI math; the figures are matplotlib.
+]
+
+[project.optional-dependencies]
+d3rlpy = [                        # OPTIONAL — archived IQN-SAC verification only; NOT the headline (ADR-026).
+    "d3rlpy==2.8.1",              #   Install only for the secondary IQN-SAC cross-check; needs a torch build
+]                                 #   compatible with d3rlpy 2.8.1 (the original reason for requires-python <3.12).
+dev = [
+    "pytest>=9.0.3",              # >=9.0.3 closes CVE-2025-71176 (insecure /tmp/pytest-of-* perms)
+    "pytest-cov>=5.0",
+    "pytest-randomly>=3.15,<5",   # HARD dep: shuffle test order + reseed RNG each test (catches inter-test
+                                  #   state leakage). Pinned (Rank 14): it was declared but MISSING from the venv,
+                                  #   so the test-order determinism guard silently vanished; bounded <5 so a major
+                                  #   bump can't drop it unnoticed. Installed build: 4.1.0.
+    "pytest-timeout>=2.3",        # hard per-test ceiling (sandbox-spawn / runaway-reward net)
+    "hypothesis>=6.100",          # property-based + metamorphic tests (tests/test_properties.py); a
+                                  #   DETERMINISTIC profile (derandomize=True) is registered in tests/conftest.py
+                                  #   so generated examples are reproducible (the project's determinism contract).
+    "ruff>=0.15,<0.16",           # pinned minor: ruff is pre-1.0 and ships breaking changes in minor bumps
+    "mypy>=1.10",
+    "ipykernel>=6.29",
+    "jupyter>=1.0",
+]
+data = [                          # data_pipeline/ (Refinitiv→gold acquisition) + the real-gold loader
+    "lseg-data>=2.0",             # Refinitiv/LSEG RDP SDK (acquisition; ADR-013)
+    "pandas-market-calendars>=4.5",  # XNYS trading-day alignment
+    "python-dotenv>=1.2.2",       # reads Refinitiv creds; >=1.2.2 closes CVE-2026-28684 (symlink-follow in set_key)
+    "pyarrow>=15",                # parquet IO for the gold panel
+    "seaborn>=0.13",              # paper-quality EDA / multi-arm comparison figures (data_pipeline/eda.py)
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 2026-07-05: pytest-timeout (declared dev-dep) gives a hung TEST a hard ceiling instead of hanging the
+# whole run. It is enabled via the CI/local flags rather than baked into addopts here, because the flag
+# ERRORS if the plugin is not installed and the local .venv does not always carry it — so wiring it into
+# addopts would break every bare `pytest` invocation. Run the ceiling with:
+#   pytest --timeout=300 --timeout-method=thread     (thread method — signal alarms are a Windows no-op)
+addopts = "-q"
+markers = [
+    "slow: marks tests that train an agent (deselect with '-m \"not slow\"')",
+    "phase0: smoke-test gate",
+    "integration: full-loop integration test",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Lint SOURCE only (2026-07-06): outputs/ holds generated run artifacts (incl. LLM/stub-authored
+# reward.py files — linting the study's own subjects is meaningless), and the notebooks are
+# EXECUTED, kernel-validated artifacts whose stored outputs would be invalidated by cosmetic
+# cell rewrites (their 7 hits are notebook idioms: E401/E402/E702).
+extend-exclude = ["outputs", "notebooks"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+# `src/orchestration/*` (the campaign device-pool + parallel test-leg engine) is OMITTED from the UNIT
+# coverage target: it is almost entirely spawned-multiprocessing worker bodies + GPU device-pinning that
+# only execute in child processes / on the RTX-4090, so it is line-covered by the SLOW integration suite
+# (`tests/test_test_leg_equivalence.py` numerically-equivalent-vs-serial proof (abs 1e-6) + `tests/test_parallel_recycling.py`),
+# NOT the deterministic in-process unit suite. Honest scoping of unit-coverage to unit-testable code, not a
+# way to hide untested logic.
+omit = ["src/orchestration/*"]
+
+[tool.coverage.report]
+# Regression floor. Local (with the licensed gold panel present) the deterministic suite covers ~90% of src
+# AFTER honest exclusions; the floor is set BELOW that so data-gated tests skipping on a no-licence CI runner
+# cannot trip it — it guards against real regressions, not environment variance. Raise as coverage climbs.
+# Coverage and mutation-score evidence regenerate via `make test` and `make mutation`.
+fail_under = 88
+show_missing = true
+# Honest, examiner-defensible exclusions (coverage.py >=7.2 `exclude_also`, ADDED to the built-in defaults).
+# These are genuinely-unreachable or integration-only lines, NOT a way to hide untested logic: TYPE_CHECKING
+# import blocks; trivial dunders; abstract/NotImplemented stubs; `__main__` CLI guards; defensive
+# re-raises; and the two environment-gated families this single-machine/Windows-dev repo cannot line-cover in
+# the deterministic UNIT suite — POSIX-only `resource` rlimits and CUDA/GPU-only branches (both exercised on
+# the Linux/4090 campaign box) and spawned-multiprocessing worker bodies (exercised by the SLOW
+# test_test_leg_equivalence integration proof, never in-process). Each such line is additionally tagged at
+# its site with a `# pragma: no cover - <reason>` comment so the rationale is auditable in the source.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "def __repr__",
+    "@(abc\\.)?abstractmethod",
+    "pragma: no cover",
+]
