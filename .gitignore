@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.mutmut-cache
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Licensed market data: the Refinitiv/LSEG panel is not redistributable.
+# The pipeline, the checksums and the provenance sidecars are tracked; the payloads never are.
+data/raw/
+data/clean/
+data/staged/
+data/gold/
+data/manifest/journal/
+data_pipeline/data/
+
+# Run artefacts at the repository root: regenerable, and large.
+/runs/
+/outputs/
+/reports/
