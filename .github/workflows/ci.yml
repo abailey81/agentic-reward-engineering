@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: lint + deterministic-core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps (light, no torch/SB3)
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements-test.txt
+          pip install ruff
+      - name: Pre-registration freeze drift-guard (read-only; enforces the design hash)
+        # scripts/freeze.py --check recomputes the canonical SHA-256 over the nine frozen
+        # artifacts (the prose record, the prereg yaml, three bound configs, arms.yaml, the two
+        # loaded prompt templates and the feedback schema) and re-runs the prose-vs-yaml gate;
+        # non-zero exit on any drift. Light (pyyaml + stdlib only), so it gates early.
+        run: python scripts/freeze.py --check
+      - name: Ruff lint
+        run: ruff check src tests scripts
+      # NOTE: `ruff format --check` is deliberately NOT a gate. The pre-registration freeze binds
+      # `src/feedback/schema.py` byte-for-byte into the canonical design hash, so an opinionated
+      # auto-formatter cannot be allowed to rewrite it. Linting (above) is enforced; layout is not.
+      - name: Run deterministic-core tests
+        # Skips 'slow' (agent-training) and the GPU/LLM-gated paths.
+        run: pytest -m "not slow" -q --cov=src --cov-report=term-missing
+      - name: Supply-chain CVE scan (pip-audit; non-blocking)
+        # A FROZEN pre-registration pins exact (and, over time, OLD) versions, so CVE accrual is the real
+        # supply-chain risk. Reported, not gating: a newly-disclosed CVE must not break the immutable frozen
+        # pipeline, but it must be visible. (`make audit` runs the same scan locally.)
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit --desc
+
+  agent-tests:
+    # Gates the FIXED SB3-SAC(+TQC) agent AND the NormalizedPolicy eval-stat FREEZE (the no-leakage
+    # invariant underpinning H2). These are 'slow' (train an agent) so they were deselected from the light
+    # job above and ran in NO CI path — the central agent + its leakage guard had no automated gate
+    # (critical-review 2026-06-20). This job installs torch + SB3 and runs exactly the slow set.
+    name: SAC/TQC agent + leakage-guard tests (slow, torch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install full deps (torch + SB3 + sb3-contrib)
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]"
+      - name: Run slow agent-training + leakage-guard tests
+        run: pytest -m "slow" -q
+      - name: Run the data_pipeline leakage tests (isolated 'src' package)
+        run: PYTHONPATH=data_pipeline pytest data_pipeline/tests --noconftest -o addopts="" -q
