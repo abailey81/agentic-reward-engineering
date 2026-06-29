@@ -1,0 +1,50 @@
+# RL algorithms (FINAL_PLAN F.7, B.6). Library-default hyperparameters, IDENTICAL across reward
+# arms to preserve identification. Record the exact resolved values here AFTER the Phase-0 smoke
+# test confirms they run, and assert them at runtime (equivalence test).
+#
+# NOTE: DIRECTIONAL / NOT THE LIVE SOURCE (rigor audit 2026-06-20). The values below are a TEMPLATE: the
+# null `sac`/`tqc` entries mean "SB3 default". The LIVE per-run agent hyperparameters are resolved by
+# `src/agents/trainer.py::resolve_agent_kwargs` from the run config (`config/prototype.yaml` for the
+# prototype, the campaign cfg for the campaign) — NOT read from this file. This file documents the
+# algorithm CHOICE + the matched-agent intent; do not treat it as the executed hyperparameter set.
+
+headline_agent: sac               # SB3 SAC — fixed across ALL feedback arms (audit A-1)
+secondary_critic_agent: tqc       # sb3-contrib TQC — distributional-critic experiment only (A-2)
+robustness_agents: [ppo, td3]     # winners only
+fallback_continuous: d4pg         # ONLY if SAC/TQC fail; NEVER qr_dqn (discrete-only)
+
+train_steps_per_candidate: 400000 # FIXED per-candidate budget (audit B-5); B* RAISED to the MEASURED KNEE 2026-07-18 (R77: the 30-point extended curve fired the pre-committed rule — paired ascents 200k->400k mean/SE 2.9-5.4 on both winners, increments beyond 400k an order smaller; verdict artifact outputs/tables/bstar_rule_verdict.json). Supersedes R74's 200000. Mirrors campaign.yaml — the preflight budget-mirror guard asserts the pair
+eval_episodes: 1                  # deterministic walk-forward over the eval split
+
+sac:                              # filled from SB3 defaults once Phase 0 confirms; do not tune per arm
+  # RECORDED SB3-2.8.0 SAC defaults (2026-07-05, map P4) — this file DOCUMENTS the fixed agent; the
+  # executed source is prototype.yaml/campaign.yaml (buffer capped 50k) resolved by
+  # trainer.resolve_agent_kwargs. `null` = "use the SB3 default"; the value in the trailing comment is
+  # that default at the PINNED stable_baselines3==2.8.0, so a silent default change on a future SB3
+  # upgrade is visible to a human diffing this recorded-defaults file. All arm-INVARIANT (the agent is
+  # fixed; audit A-1). NOT read by the run; the freeze binds the treatment, not these compute knobs.
+  policy: MlpPolicy
+  learning_rate: null             # SB3 default 3e-4
+  buffer_size: null               # SB3 default 1_000_000 -> HARD-capped to 50_000 by the executed config (ADR-042)
+  batch_size: null                # SB3 default 256
+  gamma: null                     # SB3 default 0.99
+  tau: null                       # SB3 default 0.005 (target-net Polyak) — arm-invariant; documented per the header
+  # train_freq: 1, gradient_steps: 1, target_update_interval: 1 are SB3-2.8.0 defaults, unset here and
+  # arm-invariant (used silently by the trainer; recorded for the same upgrade-drift visibility).
+  ent_coef: auto
+  learning_starts: 1000           # NOT SB3's silent default of 100: the Phase-0 smoke gate validated 1000, so the LIVE
+                                  #   trainer (trainer.resolve_agent_kwargs) resolves+floors it at 1000 to match the gate.
+                                  #   Identical across arms (the agent is fixed; audit A-1). Documented here for
+                                  #   completeness — like the rest of this file it is NOT the executed source.
+  popart: true                    # value-target SCALE normalization (src/agents/popart.py): the critic is invariant to
+                                  #   the reward SCALE (a variance-floored Sharpe can't explode it). Reward unchanged
+                                  #   (norm_reward stays False; info["port_ret"] is the object of study). Uniform across arms.
+tqc:
+  policy: MlpPolicy
+  top_quantiles_to_drop_per_net: null   # SB3-contrib default
+  n_quantiles: null
+  n_critics: null
+
+equivalence_test: true            # assert identical algo config across feedback arms at runtime —
+                                  # TEST-ONLY check src/arms/factory.py::assert_fixed_agent_across_arms
+                                  # (matched budget + seed-only-dependent SB3 kwargs; tests/test_arms.py)
