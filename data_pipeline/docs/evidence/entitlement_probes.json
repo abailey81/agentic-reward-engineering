@@ -1,0 +1,196 @@
+[
+  {
+    "probe_id": "P0",
+    "title": "Refinitiv session (platform/desktop)",
+    "status": "PASS",
+    "latency_s": 1.03,
+    "evidence": {
+      "env_file": true,
+      "env_keys_loaded": [
+        "ANTHROPIC_API_KEY",
+        "REFINITIV_APP_KEY",
+        "REFINITIV_PASSWORD",
+        "REFINITIV_USERNAME"
+      ],
+      "session": "open (platform grant or desktop proxy)"
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P1",
+    "title": "0#.SPX chain resolves (~503 rows)",
+    "status": "PASS",
+    "latency_s": 2.17,
+    "evidence": {
+      "rows": 503,
+      "cols": 2,
+      "sample": {
+        "Instrument": {
+          "0": "WEC.N",
+          "1": "TROW.OQ",
+          "2": "HST.OQ"
+        },
+        "Company Common Name": {
+          "0": "WEC Energy Group Inc",
+          "1": "T Rowe Price Group Inc",
+          "2": "Host Hotels and Resorts, Inc"
+        }
+      },
+      "index_range": [
+        "0",
+        "502"
+      ]
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P2",
+    "title": "PIT membership events 2018 (content-validated)",
+    "status": "PASS",
+    "latency_s": 1.48,
+    "evidence": {
+      "rows": 28,
+      "cols": 4,
+      "sample": {
+        "Instrument": {
+          "0": ".SPX",
+          "1": ".SPX",
+          "2": ".SPX"
+        },
+        "Constituent RIC": {
+          "0": "BCR.N^L17",
+          "1": "SNI.OQ^C18",
+          "2": "CHK.N^F20"
+        },
+        "Constituent Name": {
+          "0": "CR Bard",
+          "1": "Scripps Networks",
+          "2": "Expand Energy"
+        }
+      },
+      "index_range": [
+        "0",
+        "27"
+      ],
+      "known_truth": "GGP* leaver present"
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P3",
+    "title": "PIT membership events PRE-2016 (content: Lehman leaver 2008)",
+    "status": "PASS",
+    "latency_s": 1.0,
+    "evidence": {
+      "rows": 35,
+      "cols": 4,
+      "sample": {
+        "Instrument": {
+          "0": ".SPX",
+          "1": ".SPX",
+          "2": ".SPX"
+        },
+        "Constituent RIC": {
+          "0": "SNV.N^A26",
+          "1": "HET.N^A08",
+          "2": "CC.N^K08"
+        },
+        "Constituent Name": {
+          "0": "Synovus Fin",
+          "1": "HARRAH S",
+          "2": "Circuit City"
+        }
+      },
+      "index_range": [
+        "0",
+        "34"
+      ],
+      "known_truth": "LEH* leaver present"
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P4",
+    "title": "Datastream list LS&PCOMP0110 (DSWS)",
+    "status": "BLOCKED",
+    "latency_s": 0.0,
+    "evidence": {},
+    "error": "DatastreamPy not installed"
+  },
+  {
+    "probe_id": "P5",
+    "title": "GE total-return continuity around 2018-06-26",
+    "status": "PASS",
+    "latency_s": 0.25,
+    "evidence": {
+      "rows": 1,
+      "cols": 1,
+      "sample": {
+        "TR.TOTALRETURN": {
+          "2018-07-13 00:00:00": "<NA>"
+        }
+      },
+      "index_range": [
+        "2018-07-13 00:00:00",
+        "2018-07-13 00:00:00"
+      ]
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P6",
+    "title": "Dead RIC LEH.N^I08 history (delisted coverage)",
+    "status": "PASS",
+    "latency_s": 0.47,
+    "evidence": {
+      "rows": 177,
+      "cols": 1,
+      "sample": {
+        "Price Close": {
+          "2008-01-02 00:00:00": "62.19",
+          "2008-01-03 00:00:00": "61.0",
+          "2008-01-04 00:00:00": "58.35"
+        }
+      },
+      "index_range": [
+        "2008-01-02 00:00:00",
+        "2008-09-12 00:00:00"
+      ]
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P7",
+    "title": "Field definitions: RI day-count & currency",
+    "status": "MANUAL",
+    "latency_s": 0.14,
+    "evidence": {
+      "RI_day_count": {
+        "status": "REQUIRES_MANUAL_CONFIRMATION",
+        "note": "Datastream Navigator > RI definition on the entitled feed; harvest missing-piece #5 (docs/DATA_ENTITLEMENTS.md test 7)"
+      },
+      "currency_check": {
+        "status": "OK",
+        "sample": [
+          {
+            "Instrument": "AAPL.O",
+            "Currency": "USD"
+          }
+        ]
+      }
+    },
+    "error": ""
+  },
+  {
+    "probe_id": "P8",
+    "title": "RDP scope census (search/news/pricing)",
+    "status": "PASS",
+    "latency_s": 4.38,
+    "evidence": {
+      "search": "IN SCOPE",
+      "news": "ScopeError: Error code -1 | Insufficient scope for key=/data/news/v1/headlines, method=GET.\nRequired scopes: {'trapi.data.news.read'",
+      "pricing_snapshot": "IN SCOPE"
+    },
+    "error": ""
+  }
+]

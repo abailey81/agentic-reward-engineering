@@ -1,0 +1,25 @@
+{
+  "stage": "probe",
+  "run_id": "probe_20260619T131454Z",
+  "config_sha256_16": {
+    "data.yaml": "7df17c243fa1dde6",
+    "environment.yaml": "d1894fa3f15e17e1",
+    "eureka_loop.yaml": "74c8390dc8577d51",
+    "inference.yaml": "dea0ff2494ac9389",
+    "llm.yaml": "960856cad57d05ab"
+  },
+  "wall_clock_s": 11.67,
+  "utc": "2026-06-19T13:15:05.722544+00:00",
+  "results": [
+    "PASS",
+    "PASS",
+    "PASS",
+    "PASS",
+    "BLOCKED",
+    "PASS",
+    "PASS",
+    "MANUAL",
+    "PASS"
+  ],
+  "report": "docs\\evidence\\entitlement_report.md"
+}
