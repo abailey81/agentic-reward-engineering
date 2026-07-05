@@ -1,0 +1,140 @@
+# A campaign run (FINAL_PLAN H Phase 3, I). Scope is set via the scoping tree AFTER the Phase-0
+# timing and the pilot. CPCV is applied to WINNERS, not per-candidate (audit B-3).
+arms: [distributional, scalar, placebo, scalar_cvar5, placebo_shuffled, random_search, bayes_opt, cma_es, tpe]
+candidates_per_arm: 30                 # matched across arms; tune via scoping tree (cut candidates before seeds before folds)
+# Amendment E1 (2026-07-10, supervisor-approved; PREREGISTRATION §6/§12): per-arm WINNER seed count is
+# the ASSURANCE-TIER LADDER (mode: tiered) resolving to the flat set [0..567]. SEARCH budget untouched —
+# each candidate trains at 1 seed during search; only the per-arm winners are re-run at these seeds
+# (seeds-on-winners, ADR-023). Tiers are cumulative + order-only (CRN pairing preserved, every tier a
+# COMPLETE study; a truncation falls back to the largest COMPLETED rung, so rung spacing caps the
+# worst-case discarded seeds): 30 = distinction core (CVaR leg conclusive; mechanism complete) ->
+# 100 = sigma-precision insurance rung (sigma_D itself estimated to ~±10%) -> 189 = MC point-estimate
+# power (Sharpe leg decisive if sigma_D is as measured) -> 279 = 80% assurance (chi-square upper bound)
+# -> 340 = 90% -> 403 = 95% (the primary target) -> 568 = 99%. The STOPPING tier is determined
+# EXOGENOUSLY by measured cluster throughput against the deadline, never by inspecting results — this
+# preserves the single confirmatory look (power_analysis.ASSURANCE_TIER_BOUNDS mirrors this ladder).
+seeds: {mode: tiered, tiers: [30, 100, 189, 279, 340, 403, 568]}   # schema; resolve_seeds -> [0..567]
+cpcv:
+  apply_to: winners                    # CPCV on the fixed winners for inference, NOT inside each candidate
+  n_blocks: 16                         # even S for C(S, S/2) splits (PBO)
+train_steps_per_candidate: 400000      # mirrors algos.yaml; FIXED (audit B-5). B* = 400,000 SET 2026-07-18 (R77, supersedes R74's 200k): the extended same-protocol curve (5 budgets x 3 CRN seeds x both authored winners, cluster val-DSR) fired the PRE-COMMITTED rule at every rung vs 200k (dist +0.145/+0.161/+0.162 at 400k/800k/1.6M, mean/SE 2.9-3.6; scal +0.032 at 400k, 5.4x) with THE KNEE AT 400k (increments beyond it collapse to +0.016-0.017); 400k captures ~90% of the attainable gain at 2x compute (feasible) vs 4-8x (not). Identification unchanged (identical across arms). Dossiers: outputs/tables/bstar_rule_verdict.json + p6_summary.json + PREREGISTRATION.md R74/R77.
+
+agent:
+  # HARD replay-buffer cap (ADR-025 memory-safety, EXTENDED for B* > 50k; 2026-06-30 laptop design).
+  # Decouples the replay buffer from train_steps so the per-candidate budget B* can rise to 200k+ WITHOUT
+  # OOM: at the 1,893-dim obs, buffer_size == train_steps needs ~2.8 GB at 200k / ~5 GB at 350k and the
+  # 15.6 GB laptop OOMs (empirically confirmed by the convergence pilot, 2026-07-01). Capped at 50k the
+  # replay is a bounded ~0.76 GB sliding window. TEST leg: run_campaign reads this block, and because
+  # ``buffer_size`` is pinned here the train_steps re-couple (run_campaign ~L1095) is SKIPPED -> buffer stays
+  # 50k. SEARCH leg caps too (parallel.train_candidate: min(buffer_size, train_steps)). The convergence and
+  # σ_D pilots mirror this cap so their curves are representative of the capped-buffer campaign.
+  buffer_size: 50000
+  # Thermal guardian (ops audit M6, 2026-07-02): RESULT-NEUTRAL cooperative pause-and-cool for the 24/7
+  # laptop run — at/above ``hi`` C the SB3 callback SLEEPS the training loop until the GPU cools below
+  # ``lo`` C (hysteresis, so it never flaps around one threshold). Only wall-clock is spent; no weight,
+  # seed, or reported number changes (src/utils/guardian.py, van-Hasselt-style neutrality argument in
+  # its module docstring). Wired on EVERY training path: serial trainer + parallel TEST worker read this
+  # block directly (run_campaign overlays it onto agent_cfg -> trainer._make_governor), and the parallel
+  # SEARCH worker gets it threaded via build_parallel_opts -> parallel._spec/train_candidate (M6).
+  # Schema is trainer._make_governor's: {hi, lo, poll_secs?} in Celsius; 88/80 sits under the RTX-4050's
+  # ~93 C hardware throttle with margin. Delete the key (or set null) to disable.
+  thermal_guardian:
+    hi: 88
+    lo: 80
+
+compute:
+  # 2026-07-06 throughput (ADR-052; RESULT-NEUTRAL placement — identical instructions on identical
+  # data): pin every training process (pool workers + the serial driver) to the i7-13620H's
+  # P-cores (logical 0-11 = 6 P-cores x 2 HT; the 4 E-cores 12-15 run ~3.6 vs ~4.9 GHz with weaker
+  # IPC and are left to the OS/monitors — which also shields the run from OS jitter). Also raises
+  # priority to ABOVE_NORMAL and disables Windows EcoQoS power throttling for those processes.
+  # null disables. Machine-specific: re-derive the id list if the campaign ever moves hosts.
+  worker_cpu_affinity: "0-11"
+  primary: rtx_4050                    # development / Phase-0 on the owned RTX 4050 laptop (ADR-023, COMPUTE-1)
+  campaign: laptop_rtx_4050            # LAPTOP-ONLY confirmatory campaign on the owned RTX 4050 (ADR-040,
+                                       #   2026-06-30): Turbo 95->140W, n_gpu 2-3 (>=4 refused), buffer
+                                       #   capped 50k, ~2-3 weeks. Supersedes the earlier rented-RTX-4090 plan
+                                       #   (COST choice, not a data/licence blocker); NO UCL Myriad (ADR-023).
+  overflow: []                         # none — laptop-only decision (ADR-040); no cloud-compute budget
+  # NO GPU-hour cap (2026-06-28, user directive): there is no hard compute budget. `hard_budget_gpu_hours`
+  # was REMOVED — it was never read/enforced by any code (grep: 0 .py hits) and `auto_shutdown_on_complete`
+  # is a verified no-op. The recorded GPU-hour figures are INFORMATIONAL
+  # wall-clock/cost ESTIMATES only, NOT a limit; nothing in the design is budget-bounded.
+
+llm:
+  # HEADLINE reward-author = Claude Opus 4.8 (ADR-035, user-selected 2026-06-19) — the current frontier #1.
+  # The campaign OWNS its author: this whole block is threaded into run_arm as `llm_cfg`, so the campaign
+  # uses Opus 4.8 and does NOT inherit the prototype's Gemini. (Was previously hardcoded to the stub, and
+  # earlier read model/key from prototype.yaml — both fixed by the provider-neutral wiring, ADR-035.)
+  pass: B                              # 'B' = real LLM (Claude Opus 5); 'A' = the keyless stub control.
+  provider: anthropic                  # frontier reward-author; needs ANTHROPIC_API_KEY in the gitignored .env.
+  model_snapshot: "claude-opus-5"      # R102 (2026-07-24): confirmatory author 4.8 -> 5. Pinned snapshot
+                                       #   (dateless id IS immutable, ADR-016 + vendor's model-ID doc).
+  api_key_env: ANTHROPIC_API_KEY
+  # R106 (2026-07-27) — THE CONFIRMATORY AUTHOR IS THE 11th MODEL AND WAS MISSING BOTH PINS.
+  # This block is what the campaign ACTUALLY executes (`run_campaign_cluster.py:654` reads it; the
+  # `llm_cfg` is threaded into run_arm). `config/llm.yaml` has NO code consumer for the author, so
+  # anything registered only there is INERT for the run.
+  #   * max_tokens was ABSENT here -> `campaign.py:402` fell back to its 4096 default, so the
+  #     confirmatory author was running at 4096 while R102 recorded 8192 in llm.yaml. The registered
+  #     value and the executed value had silently disagreed since R102 -- the R84 failure mode, in the
+  #     one place it matters most. Set to the R106 UNIFORM CAP (16384) so the author matches all 10
+  #     matches all 10 legs and the capability contrasts are not confounded by budget.
+  #   * thinking was ABSENT -> Opus ran on the vendor default. Measured OFF (which is why nothing was
+  #     corrupted), but a default is not a pin, and R102's "adaptive thinking BY DEFAULT" claim was
+  #     itself disproved by live test. `{type: disabled}` VERIFIED ACCEPTED live on claude-opus-5.
+  # Both are now cross-checked against llm.yaml by preflight so they can never diverge silently again.
+  max_tokens: 16384
+  thinking: {type: disabled}
+  # Opus 5 REJECTS the `temperature` parameter, so within-generation diversity comes from prompt
+  # variation, NOT temperature (uniform across arms -> not an H2 confound; src/llm/loop.py).
+  temperature: null
+  diversity_prompt_variation: true
+  generations: 6                       # multi-generation reflection (6 x candidates_per_gen 5 = 30 budget).
+                                       #   The H3 single-shot control spends the same 30-candidate budget at generations:1.
+  h3_singleshot_generations: 1         # H3 single-shot CONTROL generation count (DEEP_H3 §1, canonical contrast):
+                                       #   the distributional arm re-searched at generations:1 spends the WHOLE
+                                       #   candidates_per_arm (30) budget in ONE generation -> best-of-N, no reflection.
+                                       #   Same winner selector (validation DSR) + same winner seed set (the E1
+                                       #   tiered ladder [0..567], Amendment E1) as the headline
+                                       #   iterative arm; archived to a SEPARATE root (search_h3_singleshot/,
+                                       #   test_h3_singleshot/distributional) for the analyze-H3 difference test.
+
+monitoring:
+  # TEST-leg wedge detection (2026-07-06, as-completed streaming archival). When NO seed training
+  # completes for this many seconds, run_recycling's on_stall fires and a WARNING "test_leg_stall"
+  # event (naming the pending arm/seed identities) lands in events.jsonl for the sentinel/watcher to
+  # escalate — the "one CUDA training wedged while every process is alive" hang a liveness check
+  # cannot see. 5400 s = ~3x the expected inter-completion cadence at n_gpu=3 x ~85-min trainings
+  # (~28 min), so a slow-but-alive pool (thermal pause included) never false-alarms while a genuine
+  # wedge surfaces within 1.5 h instead of hanging silently for days. null disables. Un-hashed
+  # compute/monitoring knob (detection only — no result, seed, or schedule effect).
+  test_stall_after_s: 5400
+
+resume: true                           # idempotent: skip completed run ids. WIRED (ops audit m10,
+                                       #   2026-07-02): this is now the DEFAULT for run_campaign's
+                                       #   --resume (config-as-truth; previously authored but never
+                                       #   read). CLI still wins: --resume forces on, --no-resume
+                                       #   forces a fresh (possibly re-billing) run.
+auto_shutdown_on_complete: false       # rented-GPU-era knob, DISARMED 2026-07-02 (laptop-only, ADR-040): the
+                                       #   dry-run still printed "host would power off now", so belt-and-braces
+                                       #   false — a forgotten --no-shutdown must never power off the laptop.
+
+# H1 "beat-the-human" baselines (PREREGISTRATION §1 H1 / §9 hand-reward panel; the old "§18-19" cite
+# was a line-number error — the prereg has only §1-§12, DEEP_H1 C-1. Eureka, Ma et al. 2024). The LLM-designed
+# winner is compared, POST-FREEZE and REPORT-ONLY, against the BEST of these hand-designed rewards.
+# Each name MUST be a real key in src/baselines/rewards.py::REWARD_CANON; the baseline TEST stage reads
+# THIS list (no hardcoding) and runs each baseline at the same winner seed set (the E1
+# tiered ladder [0..567], uniform across all test-leg units — Amendment E1) as the winners.
+# These ELEVEN are the FROZEN H1 family = the FULL hand-reward canon (2026-07-26 EXPANSION,
+# "nothing is frozen"): the old 4-core was arbitrary — the human champion could lie OUTSIDE it, and all 11
+# are trained anyway, so max-over-the-full-toolkit is the genuinely-HARD champion; this UNIFIES the old
+# 4-subset with the eureka_loop.yaml canon, which now == this list). Each is literature-cited (refs.bib,
+# reward-canon research). Mirrored + freeze-gated via config/preregistration.yaml h1_baselines. Baselines are UN-SEARCHED (a single fixed specification each),
+# while the LLM winner is the best of 30 VALIDATION candidates. NOTE: CORRECTED 2026-07-26 (deep review,
+# loop 5): the H1/N6 test does NOT deflate — its endpoint is annualised per-seed Sharpe, not DSR, and
+# deflation would be misapplied anyway because selection happens on VALIDATION and the test leg is
+# SEALED, so there is no test-set max-over-N to correct for. The residual asymmetry therefore FAVOURS
+# THE LLM, not the baselines, and is disclosed as the un-tuned-baseline bias (CH6). The DSR-deflated
+# winner-vs-best-baseline comparison still exists, but only in the DESCRIPTIVE gate panel.
+h1_baselines: [raw_return, return_minus_variance, return_minus_cvar, differential_sharpe, differential_downside_ratio, mean_variance_utility, return_minus_drawdown, return_minus_downside, return_minus_turnover, log_growth, volatility_scaled_return]

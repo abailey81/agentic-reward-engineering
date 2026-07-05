@@ -1,0 +1,17 @@
+# Market-regime labelling (FINAL_PLAN F.12; audit B-6). The independent-regime COUNT feeds the
+# power analysis (scripts/power_analysis.py) — single-digit independent regimes is the realistic
+# expectation and the reason H2 power is bounded.
+definition: vix_threshold          # vix_threshold | nber_dates | hmm_2state | hmm_3state
+# Thresholds are in conventional VIX POINTS (calm < 15, stress > 25). The gold stores vix as a
+# FRACTION (FRED VIXCLS/100); src/data/loaders.load_gold_panel rescales it to points on load, so
+# these textbook thresholds apply directly. (Before that fix every gold date was < 15 -> all calm ->
+# the independent-regime count collapsed to 1; vix-units bug, 2026-06-19.)
+vix_thresholds: {calm: 15, stress: 25}
+# UPPER sanity bound on the independent-regime count. scripts/power_analysis.py::_max_plausible_regimes READS
+# this (a REGISTERED value, not a hardcoded literal or a silent 12-fallback). 12 is a generous cap for the
+# 2005-2026 span (~6 design-time regimes, DESIGN_REGIME_COUNT); it bounds only the SECONDARY regime-stratified
+# power analysis and never enters the headline paired n.
+max_plausible_independent_regimes: 12
+# nber: use FRED USREC (point-in-time via ALFRED)
+# hmm:  fit on returns/vol; n_states per the variant
+report_per_regime: true            # OOS performance reported per regime (stratified evaluation)

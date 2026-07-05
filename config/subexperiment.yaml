@@ -1,0 +1,49 @@
+# Report-only mechanism sub-experiments (ADR-039; PREREGISTRATION §2a) — DISJOINT from the frozen m=6
+# family; produced by scripts/run_subexperiment.py and consumed by scripts/analyze_campaign.py
+# (named_blinded_root / legible_root). NEVER gates the headline.
+#
+# Two modes, both authoring under the tail-FED arm = "distributional":
+#   named   — named-vs-blinded structural A/B (label in {named, blinded})
+#   legible — numeracy-bottleneck legible-format responsiveness differential (condition in {legible, raw})
+
+# Seed count. ~150-200 seeds give >0.95 power for the all-coefficient named A/B claim at Delta = 0.5*SD
+# (src/inference/contamination.py:234). It is CONFIGURABLE and costs Opus calls (2 authorings x K candidates
+# per seed), so it is NOT frozen — set it from the power budget. --seeds / --n-seeds override this.
+seeds: 150          # default seed list = range(seeds) = 0..149 (used when neither --seeds nor --n-seeds given)
+n_seeds: null       # alias; if set, takes precedence over `seeds` for the default range
+
+candidates: 5       # candidates_per_gen K per seed per condition (the per-seed authoring budget)
+
+# Legible-rendering parameters (the numeracy-bottleneck leg). The renderer lives in src/feedback/schema.py
+# (basis-points + decile-rank); these document the scale it uses so the rendering is reproducible from config.
+legible:
+  bps_scale: 10000        # CVaR / left-tail-mass values rendered as round(value * bps_scale) basis points
+  rank_window: [-0.12, 0.0]   # decile reference span for the (decile d/10) rank tag on CVaR / tail-mass lines
+  skew_window: [-1.0, 1.0]    # symmetric reference span for the robust_skew decile tag (dimensionless, 2-dp)
+
+# Reward author — REUSE the campaign's Opus 4.8 block (config/campaign.yaml: llm). The cheap sub-experiment
+# does NOT re-run the B*=400k-step main training; it authors a reward + a cheap eval per seed (contamination.py).
+# Pass A (or --synthetic, or no ANTHROPIC_API_KEY) falls back to the keyless StubDesignerTransport.
+llm:
+  pass: B
+  provider: anthropic
+  model_snapshot: "claude-opus-5"  # R102 (2026-07-24): tracks the confirmatory author (4.8 -> 5)
+  api_key_env: ANTHROPIC_API_KEY
+  temperature: null              # Opus 5 rejects temperature -> diversity from prompt variation
+  diversity_prompt_variation: true
+
+# Panel/window/agent — the SAME anonymised panel + windows + fixed SB3-SAC the campaign uses, so the
+# per-candidate arrays are byte-identical to the blinded leg (only the rendering / provenance text differs).
+data:
+  phase: development
+  # Split-C val end (ADR-044): matches config/inference.yaml + config/data.yaml so the report-only
+  # sub-experiment runs the SAME dev window as the campaign (batch-6 M3, 2026-07-03: was a stale
+  # pre-Split-C 2017-12-31 — a ~1yr val window vs the campaign's 3yr).
+  val_end: "2019-12-31"
+  on_missing: liquidate_to_cash
+
+agent:
+  train_steps_per_candidate: 25000   # cheap eval (NOT the B*=400k-step main training); report-only
+  batch_size: 256
+  learning_rate: 0.0003
+  gamma: 0.99
