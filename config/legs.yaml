@@ -1,0 +1,109 @@
+# EXECUTED leg config (v2, R80/R82/R84/R85) — must match config/preregistration.yaml `model_suite`
+# (the freeze-gate cross-check assert_leg_roster_match binds them; NOTHING is frozen at this
+# stage — 2026-07-21). Two transports only: anthropic + openrouter.
+# Rolling "~*/-latest" aliases are BANNED. max_tokens pinned per R82 (provider defaults differ —
+# silent-truncation guard). temperature: 1.0 pinned on OpenRouter legs per R85 (uniform decoding
+# across legs — providers default differently; models that REJECT the param fall back to provider
+# default, disclosed from the gate smoke). hf_pin (R85): the open legs' PERMANENT weights anchor —
+# repo + commit retrieved from the official HF card AT GATE TIME (never inferred/fabricated),
+# FILLED 2026-07-22 from the official HF API (R93 freeze-day record; licenses re-verified: MIT/MIT/Apache/Apache/OML)
+# (see model_suite.hf_weights_pins). Costs are ceiling-planning estimates, not authorities.
+
+legs:
+  - label: deepseek-v4-pro
+    provider: openrouter
+    model: deepseek/deepseek-v4-pro
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R106 (2026-07-27) UNIFORM REASONING-OFF — ratified with the supervisor on 2026-07-26 (pack item 8) and implemented here. Was {mode: pro}: MEASURED 2/10 authoring calls truncated at 4096 with one spending the ENTIRE budget on hidden reasoning (ZERO tokens for code). R113 raised the cap to 8192 to PRESERVE that pin; R106 SUPERSEDES that reasoning — the pin itself goes off, so the suite is comparable and the masking confound (a reasoning scratchpad can silently reformat the fed floats, contaminating the numeracy headline) is removed
+    temperature: 1.0                       # R85 uniform decoding pin
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    hf_pin: {repo: deepseek-ai/DeepSeek-V4-Pro, commit: b5968e9190ef611bbf34a7229255be88a0e937c1}   # retrieved 2026-07-22, official HF API   # R85: filled from the official HF card at gate time
+    gate: contamination_screen             # fallback: glm-5.2 absorbs this seat
+  - label: glm-5.2
+    provider: openrouter
+    model: z-ai/glm-5.2
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R112 (2026-07-26) repro-gate FIX, same class as R103: GLM reasons by DEFAULT and ~40% of authoring calls spent the ENTIRE 4096 budget on hidden reasoning -> stop_reason=length, reasoning_tokens 3900-4222, EMPTY code (MEASURED 6/10 compliance). Disable VERIFIED live: 537 output tokens, 0 reasoning, code authored (raising the cap to 8192 also worked but cost ~9x). A DISABLE pin: leg_gates verifies ~0 reasoning tokens served
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    hf_pin: {repo: zai-org/GLM-5.2, commit: b4734de4facf877f85769a911abafc5283eab3d9}   # retrieved 2026-07-22, official HF API
+  - label: qwen3.6-27b
+    provider: openrouter
+    model: qwen/qwen3.6-27b
+    api_key_env: OPENROUTER_API_KEY
+    provider_pin: {only: [siliconflow], allow_fallbacks: false}
+    quantizations: [fp8]                   # pair invariant: SAME provider + quant as qwen3.5-9b (the served artifact is the fp8 variant of the pinned weights — model_suite.served_variant_disclosure)
+    reasoning: {enabled: false}            # R103 (2026-07-25) repro-gate FIX: siliconflow serves Qwen3 in THINKING mode by default, burning the whole output budget on hidden reasoning -> EMPTY authored code (0.4/10 compliance at the frozen config). Disabling thinking VERIFIED 0.4->1.0. A DISABLE pin: leg_gates verifies ~0 reasoning tokens served (client.py now captures reasoning_tokens). PAIR INVARIANT: identical reasoning config across the qwen pair
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    hf_pin: {repo: Qwen/Qwen3.6-27B, commit: 6a9e13bd6fc8f0983b9b99948120bc37f49c13e9}   # retrieved 2026-07-22, official HF API
+  - label: qwen3.5-9b
+    provider: openrouter
+    model: qwen/qwen3.5-9b
+    api_key_env: OPENROUTER_API_KEY
+    provider_pin: {only: [siliconflow], allow_fallbacks: false}
+    quantizations: [fp8]                   # pair invariant: SAME provider + quant as qwen3.6-27b
+    reasoning: {enabled: false}            # R103 (2026-07-25) repro-gate FIX: siliconflow serves Qwen3 in THINKING mode by default -> the whole output budget goes to hidden reasoning -> EMPTY authored code (0/10 compliance at the frozen config). Disabling thinking VERIFIED 0.0->1.0. A DISABLE pin: leg_gates verifies ~0 reasoning tokens served. PAIR INVARIANT: identical reasoning config across the qwen pair
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    hf_pin: {repo: Qwen/Qwen3.5-9B, commit: c202236235762e1c871ad0ccb60c8ee5ba337b9a}   # retrieved 2026-07-22, official HF API
+  - label: haiku-4.5
+    provider: anthropic
+    model: claude-haiku-4-5-20251001       # dated snapshot — best-pinned leg after Opus
+    api_key_env: ANTHROPIC_API_KEY
+    reasoning: {enabled: false}            # R106: Anthropic legs carried NO reasoning key, so they were off by VENDOR DEFAULT rather than pinned - and R102's 'Opus 5 runs adaptive thinking by default' was proved empirically FALSE, which is exactly how an unpinned default diverges from the registration. Mapped to Anthropic's thinking:{type:disabled} by src/llm/legs.py; VERIFIED ACCEPTED live on opus-5/haiku-4.5/sonnet-5 before the mapping was added
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+  - label: gpt-5.6-luna
+    provider: openrouter
+    model: openai/gpt-5.6-luna
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R106: was {effort: low} (an ENABLE pin, MEASURED 920 reasoning tokens/call). Off for uniformity + the masking confound
+    temperature: 1.0                       # GPT-5-family models may reject/fix temperature — smoke discloses per R85 policy
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+  - label: nemotron-3-super
+    provider: openrouter
+    model: nvidia/nemotron-3-super-120b-a12b
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R106: no reasoning key was set, so the PROVIDER DEFAULT applied - MEASURED 1259 reasoning tokens/call, i.e. this leg was silently thinking
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    hf_pin: {repo: nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16, commit: d51eab0d1f979ebc26b546e634a04f450d99158e}   # retrieved 2026-07-22, official HF API
+  - label: sonnet-5
+    provider: anthropic
+    model: claude-sonnet-5                 # R90/R92: the LATEST-GENERATION seat (released 2026-06-30); the generation-pair instrument is now the conditional Opus pair (R91/R92)
+    api_key_env: ANTHROPIC_API_KEY
+    reasoning: {enabled: false}            # R106: see haiku-4.5 - was off by vendor default, now PINNED
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+  - label: gemini-2.5-flash
+    provider: openrouter
+    model: google/gemini-2.5-flash         # R106 (2026-07-27) SUBSTITUTION: gemini-3.5-flash -> gemini-2.5-flash. 3.5-flash's reasoning is MANDATORY (OpenRouter 400: "Reasoning is mandatory for this endpoint and cannot be disabled", verified 2026-07-25), so it was the ONE leg that could not join a uniform-off suite. The substitute was VERIFIED 2026-07-25 (disables reasoning, meaningful risk-aware code, 83% sandbox gate-pass) and RE-VERIFIED live 2026-07-27 before this swap: id resolves, served by Google, reasoning_tokens 0 under the disable pin, stop=stop, 802 output tokens, `def reward` authored. Keeping 3.5-flash would have forced a permanent exception to the ratified uniform-off design
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R106: the whole point of the substitution — this leg CAN disable, and the disable ROUND-TRIPS (0 reasoning tokens measured)
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+    role: stretch                          # truncates SECOND at the calendar gate (kimi-k3, last in queue, truncates first — R95)
+
+  - label: kimi-k3
+    provider: openrouter
+    model: moonshotai/kimi-k3-20260715     # R95: the CANONICAL DATED slug (verified on OpenRouter 2026-07-22 — stronger pinning than the undated closed legs); always-on thinking disclosed; weights due 2026-07-27 upgrade this to open-class (hf_pin filled by rule)
+    api_key_env: OPENROUTER_API_KEY
+    reasoning: {enabled: false}            # R112 (2026-07-26) repro-gate FIX: the R97a cap bump 4096->8192 was NOT enough — 3/12 compliance calls still spent the WHOLE 8192 on hidden reasoning (reasoning_tokens 8189, stop=length, EMPTY code), and a passing call used 7004, so 8192 was marginal by construction. The "always-on thinking" premise was FALSE (mapped 2026-07-25, re-VERIFIED live here 3/3: 0 reasoning tokens, ~550 output tokens, code authored) — so the correct lever is DISABLE, not a bigger budget, which also cuts this leg's cost ~15x
+    temperature: 1.0
+    max_tokens: 16384                      # R106 uniform cap RAISED 8192 -> 16384 (2026-07-27: "raise the cap for everyone just to stay safe"). MEASURED at 8192 with reasoning off: 10 of 11 models used 7-32% of the cap, but the CONFIRMATORY Opus author used 78% (6412 tokens on 10 calls) - squarely in the 54-82% "marginal BY CONSTRUCTION" band deepseek's truncation defined, on a small sample. 16384 VERIFIED ACCEPTED live on ALL 11 models before the change. Costs nothing: billing is on tokens GENERATED, and the legs at 7-32% will not generate more
+
+# Planning prices ($/M in, $/M out) for the R81 spend ledger's pre-call estimates; the ledger's
+# AUTHORITY is the per-call cost captured from the provider response, never this table.
+planning_prices:
+  claude-opus-5: [5.00, 25.00]             # R102 (2026-07-24): THE confirmatory author (documented $5/$25 per MTok — IDENTICAL to Opus 4.8, so the R81 ceiling and the ~$28 all-in estimate are unchanged); anthropic returns no per-call cost, so the R83 ledger estimates from tokens
+  claude-opus-4-8: [5.00, 25.00]           # RETAINED post-R102: no longer the confirmatory author (vendor-LEGACY), kept as the M2 survey datapoint + the R92 generation-pair partner (opus-4.8 <-> opus-5) so the ledger can still price it
+  deepseek/deepseek-v4-pro: [0.435, 0.87]
+  z-ai/glm-5.2: [0.9688, 3.0448]
+  qwen/qwen3.6-27b: [0.45, 2.70]
+  qwen/qwen3.5-9b: [0.10, 0.15]
+  claude-haiku-4-5-20251001: [1.00, 5.00]
+  claude-sonnet-5: [2.00, 10.00]           # introductory pricing through 2026-08-31 (covers the campaign window); standard $3/$15 after
+  openai/gpt-5.6-luna: [1.00, 6.00]
+  nvidia/nemotron-3-super-120b-a12b: [0.08, 0.45]
+  google/gemini-2.5-flash: [0.30, 2.50]    # R106 (2026-07-27): DERIVED from a live call, not quoted — a 9-in/1-out completion billed $5.2e-06, which solves EXACTLY at $0.30 in / $2.50 out per MTok. ~5x cheaper than 3.5-flash on output, and reasoning-off makes the completions shorter too
+  google/gemini-3.5-flash: [1.50, 9.00]    # RETAINED post-R106: no longer a campaign leg (mandatory reasoning), kept so the M2 survey + any historical archive row can still be priced
+  moonshotai/kimi-k3-20260715: [3.00, 15.00]  # verified on OpenRouter 2026-07-22; always-on thinking -> the priciest leg (~$5-11 expected at the 8192 cap, worst ~$22 at caps; R97a); the compliance gate measures real output economics
