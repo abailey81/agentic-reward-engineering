@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="516" viewBox="0 0 1400 516" role="img">
+<rect x="0.5" y="0.5" width="1399.0" height="515.0" rx="14" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="56.0" y="46.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="14.5" font-weight="400" fill="#7d8590" text-anchor="start">Net Sharpe difference, pooled over the 11 models, with its 90% interval</text>
+<rect x="810.2" y="74.0" width="94.5" height="224.0" rx="0" fill="#56B4E9" stroke="none" stroke-width="1" opacity="0.09"/>
+<text x="857.5" y="64.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#7d8590" text-anchor="middle">registered margin 0.0756</text>
+<line x1="482.5" y1="74.0" x2="482.5" y2="298.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt" stroke-dasharray="2 4"/>
+<text x="482.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#7d8590" text-anchor="middle">-0.6</text>
+<line x1="607.5" y1="74.0" x2="607.5" y2="298.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt" stroke-dasharray="2 4"/>
+<text x="607.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#7d8590" text-anchor="middle">-0.4</text>
+<line x1="732.5" y1="74.0" x2="732.5" y2="298.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt" stroke-dasharray="2 4"/>
+<text x="732.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#7d8590" text-anchor="middle">-0.2</text>
+<line x1="857.5" y1="74.0" x2="857.5" y2="298.0" stroke="#9198a1" stroke-width="1.2" stroke-linecap="butt"/>
+<text x="857.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#9198a1" text-anchor="middle"> 0.0</text>
+<line x1="982.5" y1="74.0" x2="982.5" y2="298.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt" stroke-dasharray="2 4"/>
+<text x="982.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#7d8590" text-anchor="middle">+0.2</text>
+<line x1="1107.5" y1="74.0" x2="1107.5" y2="298.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt" stroke-dasharray="2 4"/>
+<text x="1107.5" y="318.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#7d8590" text-anchor="middle">+0.4</text>
+<text x="448.0" y="105.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" fill="#e6edf3" text-anchor="end">distributional minus scalar</text>
+<line x1="696.2" y1="100.0" x2="881.2" y2="100.0" stroke="#E8894A" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="696.2" y1="94.0" x2="696.2" y2="106.0" stroke="#E8894A" stroke-width="2.2" stroke-linecap="butt"/>
+<line x1="881.2" y1="94.0" x2="881.2" y2="106.0" stroke="#E8894A" stroke-width="2.2" stroke-linecap="butt"/>
+<circle cx="818.1" cy="100" r="6" fill="#E8894A" stroke="#0d1117" stroke-width="1.6"/>
+<text x="1344.0" y="105.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#E8894A" text-anchor="end">-0.063  [-0.258, +0.038]</text>
+<text x="448.0" y="149.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" fill="#e6edf3" text-anchor="end">distributional minus placebo</text>
+<line x1="535.6" y1="144.0" x2="810.0" y2="144.0" stroke="#ADADAD" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="535.6" y1="138.0" x2="535.6" y2="150.0" stroke="#ADADAD" stroke-width="2.2" stroke-linecap="butt"/>
+<line x1="810.0" y1="138.0" x2="810.0" y2="150.0" stroke="#ADADAD" stroke-width="2.2" stroke-linecap="butt"/>
+<circle cx="730.0" cy="144" r="6" fill="#ADADAD" stroke="#0d1117" stroke-width="1.6"/>
+<text x="1344.0" y="149.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#ADADAD" text-anchor="end">-0.204  [-0.515, -0.076]</text>
+<text x="448.0" y="193.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" fill="#e6edf3" text-anchor="end">distributional minus scalar plus one</text>
+<line x1="513.8" y1="188.0" x2="851.9" y2="188.0" stroke="#3FBF97" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="513.8" y1="182.0" x2="513.8" y2="194.0" stroke="#3FBF97" stroke-width="2.2" stroke-linecap="butt"/>
+<line x1="851.9" y1="182.0" x2="851.9" y2="194.0" stroke="#3FBF97" stroke-width="2.2" stroke-linecap="butt"/>
+<circle cx="747.5" cy="188" r="6" fill="#3FBF97" stroke="#0d1117" stroke-width="1.6"/>
+<text x="1344.0" y="193.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#3FBF97" text-anchor="end">-0.176  [-0.550, -0.009]</text>
+<text x="448.0" y="237.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" fill="#e6edf3" text-anchor="end">distributional minus scrambled</text>
+<line x1="741.2" y1="232.0" x2="916.2" y2="232.0" stroke="#DA96BC" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="741.2" y1="226.0" x2="741.2" y2="238.0" stroke="#DA96BC" stroke-width="2.2" stroke-linecap="butt"/>
+<line x1="916.2" y1="226.0" x2="916.2" y2="238.0" stroke="#DA96BC" stroke-width="2.2" stroke-linecap="butt"/>
+<circle cx="840.6" cy="232" r="6" fill="#DA96BC" stroke="#0d1117" stroke-width="1.6"/>
+<text x="1344.0" y="237.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#DA96BC" text-anchor="end">-0.027  [-0.186, +0.094]</text>
+<text x="448.0" y="281.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="400" fill="#e6edf3" text-anchor="end">scalar plus one minus scalar</text>
+<line x1="859.4" y1="276.0" x2="1074.4" y2="276.0" stroke="#3FBF97" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="859.4" y1="270.0" x2="859.4" y2="282.0" stroke="#3FBF97" stroke-width="2.2" stroke-linecap="butt"/>
+<line x1="1074.4" y1="270.0" x2="1074.4" y2="282.0" stroke="#3FBF97" stroke-width="2.2" stroke-linecap="butt"/>
+<circle cx="938.8" cy="276" r="6" fill="#3FBF97" stroke="#0d1117" stroke-width="1.6"/>
+<text x="1344.0" y="281.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#3FBF97" text-anchor="end">+0.130  [+0.003, +0.347]</text>
+<line x1="56.0" y1="356.0" x2="1344.0" y2="356.0" stroke="#262c36" stroke-width="1" stroke-linecap="butt"/>
+<text x="56.0" y="392.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="650" fill="#e6edf3" text-anchor="start">Best arm, by model</text>
+<text x="56.0" y="414.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" fill="#9198a1" text-anchor="start">out of 11</text>
+<rect x="470.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="512.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="554.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="596.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="638.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="680.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="722.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<rect x="764.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#E8894A" stroke="none" stroke-width="1"/>
+<rect x="806.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#E8894A" stroke="none" stroke-width="1"/>
+<rect x="848.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#3FBF97" stroke="none" stroke-width="1"/>
+<rect x="890.0" y="376.0" width="34.0" height="34.0" rx="6" fill="#DA96BC" stroke="none" stroke-width="1"/>
+<rect x="470.0" y="444.0" width="12.0" height="12.0" rx="3" fill="#ADADAD" stroke="none" stroke-width="1"/>
+<text x="490.0" y="456.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#9198a1" text-anchor="start">placebo 7</text>
+<rect x="642.0" y="444.0" width="12.0" height="12.0" rx="3" fill="#E8894A" stroke="none" stroke-width="1"/>
+<text x="662.0" y="456.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#9198a1" text-anchor="start">scalar 2</text>
+<rect x="814.0" y="444.0" width="12.0" height="12.0" rx="3" fill="#3FBF97" stroke="none" stroke-width="1"/>
+<text x="834.0" y="456.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#9198a1" text-anchor="start">scalar plus one 1</text>
+<rect x="986.0" y="444.0" width="12.0" height="12.0" rx="3" fill="#DA96BC" stroke="none" stroke-width="1"/>
+<text x="1006.0" y="456.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#9198a1" text-anchor="start">scrambled 1</text>
+<rect x="1158.0" y="444.0" width="12.0" height="12.0" rx="3" fill="#4DA3D9" stroke="none" stroke-width="1"/>
+<text x="1178.0" y="456.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#9198a1" text-anchor="start">distributional 0</text>
+<text x="56.0" y="488.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#7d8590" text-anchor="start">the placebo arm finished best on 7 of the 11 models, and the distributional arm on none</text>
+</svg>

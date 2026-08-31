@@ -77,6 +77,18 @@ reweight the six terms of a fixed formula where a model may write anything.
 Across all 11 models, six zeroes in the prompt beat the six real numbers they replaced. We had
 predicted otherwise, and the answer we got is the more interesting one.
 
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/results-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/results-light.svg">
+  <img alt="The five arm contrasts in net Sharpe, with their 90 per cent intervals" src="assets/results-light.svg" width="880">
+</picture>
+</div>
+
+<div align="center"><sub>Each row is a difference in net Sharpe, pooled over the 11 models, with its 90 per cent interval. The shaded band is the margin we registered in advance. Two of the intervals fall wholly below zero and one falls wholly above it.</sub></div>
+
+<br>
+
 - **Six zeroes beat the six real numbers by 0.20 net Sharpe.** No 90 per cent interval on that gap
   reaches zero. On the worst-5% loss the real six do beat the same six mislabelled, which is the one
   measure that control was set to decide, and on return the two arms are level.
@@ -215,6 +227,18 @@ of 1e-6.
 | **Reproducibility** | Because model calls are not reproducible, we replay results from an on-disk provenance archive. Every prompt, authored reward, feedback block and token count is archived while the run is happening. |
 
 ## Data availability
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/splits-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/splits-light.svg">
+  <img alt="The panel and its training, validation and sealed test splits" src="assets/splits-light.svg" width="880">
+</picture>
+</div>
+
+<div align="center"><sub>The agent learns on the training years and candidate rewards are selected on the validation years. The test window was opened once, after every decision was fixed.</sub></div>
+
+<br>
 
 The headline results use a licensed Refinitiv/LSEG panel of US daily total returns that we cannot
 redistribute. It covers 5,406 sessions from January 2005 to 30 June 2026 and the 963 companies that
