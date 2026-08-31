@@ -10,11 +10,10 @@
 
 [![Python](https://img.shields.io/badge/python-3.11-1f2328?labelColor=1f2328&color=0072B2)](https://www.python.org/)
 [![Models](https://img.shields.io/badge/models-11-0072B2?labelColor=1f2328)](#the-scale-of-the-experiment)
-[![Seeds](https://img.shields.io/badge/seeds-568%20per%20unit-0072B2?labelColor=1f2328)](#the-scale-of-the-experiment)
 [![Tests](https://img.shields.io/badge/tests-passing-009E73?labelColor=1f2328)](#quality-gates)
 [![Coverage](https://img.shields.io/badge/coverage-90.97%25-009E73?labelColor=1f2328)](#quality-gates)
 [![Pre-registered](https://img.shields.io/badge/design-pre--registered-D55E00?labelColor=1f2328)](PREREGISTRATION.md)
-[![Design hash](https://img.shields.io/badge/design%20hash-3ca6f01a-D55E00?labelColor=1f2328)](provenance/prereg-v2.1.sha256)
+[![Design hash](https://img.shields.io/badge/hash-3ca6f01a-D55E00?labelColor=1f2328)](provenance/prereg-v2.1.sha256)
 [![Licence](https://img.shields.io/badge/licence-MIT-59636e?labelColor=1f2328)](LICENSE)
 
 **[Overview](#overview)** · **[What the arms change](#what-the-arms-change)** · **[What we found](#what-we-found)** · **[Scale](#the-scale-of-the-experiment)** · **[The loop](#the-reflection-loop)** · **[Reproducing](#reproducing-the-work)** · **[Layout](#repository-layout)**
