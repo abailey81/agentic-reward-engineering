@@ -40,10 +40,10 @@ never the model, the agent, the data or the years. We then trained a fixed Soft 
 568 times on each cell's best reward, trading the 30 largest US companies of January 2005 over a
 test window that stayed sealed throughout development and was opened exactly once.
 
-We fixed the plan and recorded its hash before that window opened. The verdict below is the one our
-own rule gave rather than the one we hoped for. This repository holds the method and the
-evidence behind it, which is the code, the frozen design record and the provenance ledger that lets
-a reader check every artefact by SHA-256.
+We fixed the plan and recorded its hash before that window opened. What came back went against our
+prediction, and it is reported here in full. This repository holds the method and the evidence
+behind it, which is the code, the frozen design record and the provenance ledger that lets a reader
+check every artefact by SHA-256.
 
 ## What the arms change
 
@@ -74,25 +74,27 @@ reweight the six terms of a fixed formula where a model may write anything.
 
 ## What we found
 
-The registered prediction did not survive its own test, and we report the result as the rule gave it.
+Across all 11 models, six zeroes in the prompt beat the six real numbers they replaced. We had
+predicted otherwise, and the answer we got is the more interesting one.
 
+- **Six zeroes beat the six real numbers by 0.20 net Sharpe.** No 90 per cent interval on that gap
+  reaches zero. On the worst-5% loss the real six do beat the same six mislabelled, which is the one
+  measure that control was set to decide, and on return the two arms are level.
+- **One number helped and six did not.** Adding the worst-5% loss beat the score line alone by 0.13
+  net Sharpe, and the other five numbers cost 0.18 against that gain.
+- **The registered prediction did not hold.** We predicted the distributional arm would beat scalar,
+  scalar plus one and placebo on the worst-5% loss, and fall no more than 0.0756 net Sharpe behind
+  them on return. Both halves had to hold. The first held in two of the 11 models and the second in
+  none.
+- **Trading cost is where the arms separate.** Before the charge the five lie within 0.04 Sharpe, and
+  after it they span 0.25, because agents that traded more scored lower.
+- **The written code does not move with the six numbers.** No code property tracks them by more than
+  its own noise, and that holds across all 55 cells. The gap is not a resolution limit. Only 0.9 per
+  cent of the differences fell below a model's own threshold.
 - **Model-written rewards work, but not by the margin the test asked for.** 53 of the 55 cells end
   the test window in profit after the trading charge, and nine of them beat all 11 hand-written
   rewards. Five of those nine came from the placebo arm. Ten of the 11 hand-written rewards end in
   loss once that charge is applied.
-- **The headline test failed.** We predicted the distributional arm would beat scalar, scalar plus
-  one and placebo on the worst-5% loss, and fall no more than 0.0756 net Sharpe behind them on
-  return. Both halves had to hold. The first held in two of the 11 models and the second in none.
-- **One number helped and six did not.** Adding the worst-5% loss beat the score line alone by 0.13
-  net Sharpe, and the other five numbers cost 0.18 against that gain.
-- **Six zeroes beat the six real numbers by 0.20 net Sharpe.** On the worst-5% loss the real six do
-  beat the same six mislabelled, which is the one measure that control was set to decide. On return
-  the two arms are level.
-- **Trading cost separates the arms.** Before the charge the five lie within 0.04 Sharpe, and after
-  it they span 0.25, because agents that traded more scored lower.
-- **The written code does not move with the six numbers.** No code property tracks them by more than
-  its own noise, and that holds across all 55 cells. The gap is not a resolution limit. Only 0.9 per cent
-  of the differences fell below a model's own threshold.
 
 ## The scale of the experiment
 
@@ -113,7 +115,7 @@ The registered prediction did not survive its own test, and we report the result
 | | What it asks | What happened |
 |---|---|---|
 | **H1** | Does the model-written reward beat all 11 hand-written ones? | **No.** It finishes below return minus turnover, the only one of the 11 that makes money. |
-| **H2** | Does the distributional arm beat the three arms that tell the model less? *(the headline)* | **The claim failed.** The worst-loss half held in 2 of 11 models. The return half held in none, because the six numbers cost return. |
+| **H2** | Does the distributional arm beat the three arms that tell the model less? *(the headline)* | **Not as predicted.** The worst-loss half held in 2 of 11 models. The return half held in none, because the six numbers cost return. |
 | **H3** | Does revising over six rounds beat drawing all 30 candidates at once? | **No.** Revising did worse than one draw of all 30. |
 | **H4** | Does the model beat all four numerical search methods at once? | **No.** It beats three of the four and ties the fourth, and the rule needs all four. |
 
