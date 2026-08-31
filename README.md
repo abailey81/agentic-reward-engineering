@@ -9,13 +9,15 @@
 <br>
 
 [![Python](https://img.shields.io/badge/python-3.11-1f2328?labelColor=1f2328&color=0072B2)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-3%2C008%20passing-009E73?labelColor=1f2328)](#quality-gates)
+[![Models](https://img.shields.io/badge/models-11-0072B2?labelColor=1f2328)](#the-scale-of-the-experiment)
+[![Seeds](https://img.shields.io/badge/seeds-568%20per%20unit-0072B2?labelColor=1f2328)](#the-scale-of-the-experiment)
+[![Tests](https://img.shields.io/badge/tests-passing-009E73?labelColor=1f2328)](#quality-gates)
 [![Coverage](https://img.shields.io/badge/coverage-90.97%25-009E73?labelColor=1f2328)](#quality-gates)
-[![Pre-registered](https://img.shields.io/badge/design-pre--registered-0072B2?labelColor=1f2328)](PREREGISTRATION.md)
+[![Pre-registered](https://img.shields.io/badge/design-pre--registered-D55E00?labelColor=1f2328)](PREREGISTRATION.md)
 [![Design hash](https://img.shields.io/badge/design%20hash-3ca6f01a-D55E00?labelColor=1f2328)](provenance/prereg-v2.1.sha256)
 [![Licence](https://img.shields.io/badge/licence-MIT-59636e?labelColor=1f2328)](LICENSE)
 
-**[Overview](#overview)** · **[What varies](#what-varies-between-arms)** · **[The loop](#the-reflection-loop)** · **[Reproducing](#reproducing-the-work)** · **[Design integrity](#why-the-design-holds-up)** · **[Layout](#repository-layout)**
+**[Overview](#overview)** · **[What the arms change](#what-the-arms-change)** · **[What we found](#what-we-found)** · **[Scale](#the-scale-of-the-experiment)** · **[The loop](#the-reflection-loop)** · **[Reproducing](#reproducing-the-work)** · **[Layout](#repository-layout)**
 
 <sub>Tamer Atesyakar · MSc Banking and Digital Finance · UCL Institute of Finance and Technology<br>Supervisor: Dr Ramin Okhrati</sub>
 
@@ -23,49 +25,101 @@
 
 <br>
 
-> **Does a language model write better reward code when its prompt includes a multi-level tail-risk
-> profile, or does a single performance number do just as well?**
+> **A language model writes the reward function. Between attempts it receives a note saying how
+> the last one did. How much should that message say about risk?**
 
 ## Overview
 
-We use a large language model as an automated reward engineer. Through an Eureka-style reflection
-loop it writes the Python reward function that a fixed Soft Actor-Critic agent then optimises while
-that agent allocates a long-only equity portfolio.
+A language model can write a trading agent's reward function in code, which is the scoring rule the
+agent learns from by trial and error. Between attempts the model receives a short feedback block
+saying how its last reward scored, and beneath it we may add six labelled numbers about the worst
+days. No published experiment we found tests what it should say.
 
-The one thing we vary between arms is the feedback the designer receives between iterations. In the
-treatment condition its prompt includes six coherent statistics about the left tail of the realised
-returns, which the control condition replaces with a single performance number. Because we hold the
-agent, the data, the search budget and the evaluation identical everywhere, any difference in the
-reward code that comes back is attributable to the information in that feedback and to nothing else
-in the loop.
+We built five versions of that block, called arms. Eleven models each wrote and revised 30 candidate
+rewards under every arm, which gives 55 model-arm cells. Between arms only the block differs, and
+never the model, the agent, the data or the years. We then trained a fixed Soft Actor-Critic agent
+568 times on each cell's best reward, trading the 30 largest US companies of January 2005 over a
+test window that stayed sealed throughout development and was opened exactly once.
 
-We evaluate a pre-registered, placebo-controlled design on a survivorship-free, point-in-time equity
-panel whose final period stays sealed until a single registered read on the pre-registered date.
-Four further arms separate the information in that feedback from everything travelling with it: a
-single-CVaR arm with one tail level, a placebo matched in length and field count, a shuffled placebo
-with the treatment's exact structure and deranged values, and a scalar control supplying the
-performance number alone. This repository holds the method and the evidence behind it, which is the
-code, the frozen design record and the provenance ledger that lets a reader check every artefact by
-SHA-256.
+We fixed the plan and recorded its hash before that window opened. The verdict below is the one our
+own rule gave rather than the one we hoped for. This repository holds the method and the
+evidence behind it, which is the code, the frozen design record and the provenance ledger that lets
+a reader check every artefact by SHA-256.
 
-## What varies between arms
+## What the arms change
 
 <div align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/contrast-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/contrast-light.svg">
-  <img alt="The treatment arm's feedback block beside the scalar control's" src="assets/contrast-light.svg" width="880">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/arms-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/arms-light.svg">
+  <img alt="The five arms and the feedback block each one receives" src="assets/arms-light.svg" width="880">
 </picture>
 </div>
 
-<div align="center"><sub>The arm block that <code>src/feedback/schema.py</code> renders into the reflection prompt. Both arms open on the same header line, and we add the six tail statistics beneath it in the treatment arm alone.</sub></div>
+<div align="center"><sub>Every arm opens on the same score line. Below it, each arm receives what the frozen schema in <code>src/feedback/schema.py</code> renders for it, and the colours are the ones the figure suite uses throughout the dissertation.</sub></div>
 
 <br>
 
-The six statistics are CVaR at the 1, 5, 10 and 25 per cent levels, left-tail mass, which is the
-probability of a return below minus two standard deviations, and robust skew. We call them
-multi-level tail-risk feedback rather than a distributional prompt, because they are a
-theory-grounded summary of the lower tail and not the full return distribution.
+The six numbers are CVaR at the 1, 5, 10 and 25 per cent levels, left-tail mass, which is the share
+of days falling far below the average, and left-tail skew. Four search methods run beside the five
+arms as comparators. They get no prompt at all, since they replace the model, and they may only
+reweight the six terms of a fixed formula where a model may write anything.
+
+| Arm | What its block contains | Change from the distributional arm |
+|---|---|---|
+| `distributional` | all six tail numbers under their own labels | the arm under test |
+| `scalar` | the score line only | the six numbers removed |
+| `scalar_cvar5` | the score line plus one tail number | five of the six removed |
+| `placebo` | six zeroes under neutral labels | same shape, no content |
+| `placebo_shuffled` | the six real numbers under the wrong labels | same values, wrong labels |
+
+## What we found
+
+The registered prediction did not survive its own test, and we report the result as the rule gave it.
+
+- **Model-written rewards work, but not by the margin the test asked for.** 53 of the 55 cells end
+  the test window in profit after the trading charge, and nine of them beat all 11 hand-written
+  rewards. Five of those nine came from the placebo arm. Ten of the 11 hand-written rewards end in
+  loss once that charge is applied.
+- **The headline test failed.** We predicted the distributional arm would beat scalar, scalar plus
+  one and placebo on the worst-5% loss, and fall no more than 0.0756 net Sharpe behind them on
+  return. Both halves had to hold. The first held in two of the 11 models and the second in none.
+- **One number helped and six did not.** Adding the worst-5% loss beat the score line alone by 0.13
+  net Sharpe, and the other five numbers cost 0.18 against that gain.
+- **Six zeroes beat the six real numbers by 0.20 net Sharpe.** On the worst-5% loss the real six do
+  beat the same six mislabelled, which is the one measure that control was set to decide. On return
+  the two arms are level.
+- **Trading cost separates the arms.** Before the charge the five lie within 0.04 Sharpe, and after
+  it they span 0.25, because agents that traded more scored lower.
+- **The written code does not move with the six numbers.** No code property tracks them by more than
+  its own noise, and that holds across all 55 cells. The gap is not a resolution limit. Only 0.9 per cent
+  of the differences fell below a model's own threshold.
+
+## The scale of the experiment
+
+| Quantity | Value |
+|---|---|
+| Language models writing reward functions | 11 |
+| Feedback arms, and numerical search methods beside them | 5 and 4 |
+| Comparison units | 71 |
+| Candidate budget per model and arm | 30, drawn over 6 rounds |
+| Candidate draws planned, and those that produced a working reward | 1,650 and 1,393 |
+| Seeds per comparison unit | 568 |
+| Environment steps per training | 400,000 |
+| Trainings scored on the test window, and run in all | 40,328 and 41,873 |
+| Processor-hours consumed | 288,533 |
+
+## The four hypotheses
+
+| | What it asks | What happened |
+|---|---|---|
+| **H1** | Does the model-written reward beat all 11 hand-written ones? | **No.** It finishes below return minus turnover, the only one of the 11 that makes money. |
+| **H2** | Does the distributional arm beat the three arms that tell the model less? *(the headline)* | **The claim failed.** The worst-loss half held in 2 of 11 models. The return half held in none, because the six numbers cost return. |
+| **H3** | Does revising over six rounds beat drawing all 30 candidates at once? | **No.** Revising did worse than one draw of all 30. |
+| **H4** | Does the model beat all four numerical search methods at once? | **No.** It beats three of the four and ties the fourth, and the rule needs all four. |
+
+H1, H2 and H4 each require the claim to hold against every comparator at once, and the verdict
+follows the weakest single comparison.
 
 ## The reflection loop
 
@@ -77,7 +131,7 @@ theory-grounded summary of the lower tail and not the full return distribution.
 </picture>
 </div>
 
-<div align="center"><sub>One generation of the loop. The five stages are common to every model arm, and the block returning along the foot is where the arms differ.</sub></div>
+<div align="center"><sub>One generation of the loop. The five stages are common to every arm, and the block returning along the foot is where the arms differ.</sub></div>
 
 <br>
 
@@ -88,34 +142,13 @@ training returns, render the arm's feedback block from that measurement, and car
 the next prompt. Every prompt, response, reward source and token count is archived while the run is
 happening, which is what later lets the analysis replay from disk.
 
-## The nine arms
-
-Five of the nine arms route through the language model, leaving four search baselines that never
-call it.
-
-| Arm | Family | What it isolates |
-|---|---|---|
-| `distributional` | Model | The treatment: a performance number and the six-statistic tail profile. |
-| `scalar` | Model | The control: the same loop with a performance number alone. |
-| `scalar_cvar5` | Model | One tail level only. Separates any tail information from a *profile* of it. |
-| `placebo` | Model | A block matched in length and field count, carrying inert values. Separates information from token budget. |
-| `placebo_shuffled` | Model | The treatment block's exact structure with its values deranged. Separates content from shape. |
-| `random_search` | Search | Random search over reward code. Isolates search quality from authorship. |
-| `bayes_opt` | Search | Gaussian-process expected improvement over a fixed reward template. |
-| `cma_es` | Search | CMA-ES over the same template, an evolution-strategy comparator. |
-| `tpe` | Search | Tree-structured Parzen estimator over the same template, a density-ratio comparator. |
-
-The pre-registration fixes four hypotheses. H2, the feedback contrast, is the headline. H1 measures
-the authored reward against an eleven-member canon of hand-written rewards, H3 separates the
-reflection loop from single-shot generation, and H4 is the portfolio of search baselines.
-
 ## Contributions
 
 | | Contribution |
 |---|---|
-| **N1** | As far as we have been able to establish, this is the first study to supply a language-model reward designer with a multi-level tail-risk profile, and to test it against matched scalar and placebo feedback under a pre-registered equivalence design. |
-| **N2** | It also appears to be the first Eureka-style synthesis of reward *code* for a trading and portfolio agent. Earlier reward-as-code work comes from robotics and control. The nearest finance work has the model emit a signal while leaving the reward itself hand-written. |
-| **N3** | A contamination-aware, multiplicity-honest evaluation protocol for model-authored reward code. We adopted and adapted this from existing practice, and claim no novelty for the protocol. |
+| **One** | **A way to measure what richer feedback adds.** As far as we can find, nobody has had a language model write the reward code for an agent that has to manage risk, and no published experiment compares one level of detail about risk against another. Of 56 ablation experiments across 15 studies, not one ran a placebo and none fixed an analysis plan in advance, which makes this the first pre-registered study we know of in automated reward design. The feedback signal needs no access to the learner, since we read it from the agent's own returns. |
+| **Two** | **What we found.** Three competing explanations for why the six numbers leave no mark on return, each leaving a different measurable trace. Failure rates for writing working code that run from none at all to 86 per cent across the 11 models. All 11 hand-written rewards make money before the trading charge and ten lose it after. |
+| **Three** | **What went against our expectations.** One number about the worst days helps, all six hurt, and six zeroes beat the six real numbers, with no 90 per cent interval on those gaps reaching zero. On the ten models whose two authoring runs matched in candidates and seeds, the two runs name a different winning arm for four of them. |
 
 ## Getting started
 
@@ -160,7 +193,7 @@ the campaign archive, or both.
 
 ### Running the campaign
 
-We run the confirmatory campaign on the **UCL Myriad HPC cluster** under SGE, orchestrated by
+We ran the confirmatory campaign on the **UCL Myriad HPC cluster** under SGE, orchestrated by
 `scripts/run_campaign_cluster.py`, with device-homogeneous pools so that every common-random-number
 comparison stays inside one hardware block. We keep a laptop track in full parity as the certified
 fallback, running the same science primitives on both. A parallel run is proved numerically
@@ -177,18 +210,24 @@ of 1e-6.
 | **Reward hacking** | Model-authored code is AST-gated and executed in a sandboxed subprocess. Selection runs on a tail-blind, reward-independent held-out Deflated Sharpe, which the sealed test never informs. |
 | **Multiplicity** | A frozen family of six tests, intersection-union tests for the co-primary contrasts, Benjamini-Hochberg control, and a registered graphical alpha-recycling tier. |
 | **Inference rigour** | Stratified-bootstrap interquartile-mean intervals, TOST equivalence, Bayes factors, the Model Confidence Set, PBO and CSCV, Deflated and Probabilistic Sharpe, FZ0 value-at-risk and expected-shortfall backtests, extreme-value tail fits, and factor attribution. |
+| **A result that is only one model's** | Every arm runs on all 11 models, and the claim is the count across them rather than the best cell. |
 | **Reproducibility** | Because model calls are not reproducible, we replay results from an on-disk provenance archive. Every prompt, authored reward, feedback block and token count is archived while the run is happening. |
 
 ## Data availability
 
-The headline results use a licensed Refinitiv/LSEG equity panel that we cannot redistribute. This
-repository therefore ships the acquisition pipeline, the SHA-256 checksums and the provenance
+The headline results use a licensed Refinitiv/LSEG panel of US daily total returns that we cannot
+redistribute. It covers 5,406 sessions from January 2005 to 30 June 2026 and the 963 companies that
+were in the S&P 500 at any point, of which the agent may hold the 30 largest by market value in
+January 2005, plus cash. Training runs to 2016, validation covers 2017 to 2019, and the test window
+runs from 2020 to 30 June 2026.
+
+This repository therefore ships the acquisition pipeline, the SHA-256 checksums and the provenance
 lineage. An entitled user can rebuild the panel byte-for-byte and check it against the frozen
 reference with `python scripts/verify_gold.py`. The panel itself is deliberately absent.
 
-However, the method is still verifiable end to end without the licensed panel. `make reproduce` runs the whole
-machinery on a synthetic panel of identical shape and asserts a byte-stable result, which may be the
-strongest check available to a reader who holds no entitlement.
+However, the method is still verifiable end to end without the licensed panel. `make reproduce` runs
+the whole machinery on a synthetic panel of identical shape and asserts a byte-stable result, which
+may be the strongest check available to a reader who holds no entitlement.
 
 ## Determinism and provenance
 
@@ -212,10 +251,13 @@ places.
 | Design-hash drift | `make freeze-check` | 23 consistency checks over the nine frozen artefacts |
 | Lint | `make lint` | `src`, `tests`, `scripts` |
 | Types | `make typecheck` | `src` |
-| Tests | `make test` | 3,008 tests: 2,970 deterministic-core, 15 agent-training, 23 data-pipeline |
+| Tests | `make test` | 3,008 on this tree: 2,970 deterministic-core, 15 agent-training, 23 data-pipeline |
 | Coverage floor | `pytest --cov=src` | 88 per cent of `src` after documented exclusions |
 | Mutation-testing exhibit | `make mutation` | The core numeric modules |
 | Supply-chain scan | `make audit` | The pinned dependency set |
+
+The dissertation reports 2,883 tests passing at the campaign's final gate, and 2,875 at the
+pre-launch gate before it. The suite has grown since, which is why this tree runs more.
 
 The same gates are written out as a continuous-integration workflow in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which runs the freeze gate, the lint, the
@@ -233,9 +275,10 @@ src/
   reward/         The reward contract
   sandbox/        AST gate and subprocess isolation for model-authored code
   selection/      Held-out Deflated-Sharpe fitness (reward-independent)
-  agents/         Stable-Baselines3 SAC (headline) and TQC (secondary critic); PopArt value normalisation
+  agents/         Stable-Baselines3 SAC, the registered headline learner, and the registered TQC
+                  secondary critic; PopArt value normalisation
   llm/            The reflection loop and a pinned, fully archived model client
-  arms/           Builds the nine experimental arms from config
+  arms/           Builds the experimental arms and the search baselines from config
   search/         Search baselines: random search over code, and three optimisers over a template
   inference/      Bootstrap, PBO/CSCV, Deflated Sharpe, Bayes null, Model Confidence Set, reward-code distance
   viz/            Publication-grade figure engine (Okabe-Ito palette, honest-null discipline)
