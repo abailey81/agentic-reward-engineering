@@ -288,8 +288,9 @@ The dissertation reports 2,883 tests passing at the campaign's final gate, and 2
 pre-launch gate before it. The suite has grown since, which is why this tree runs more.
 
 The same gates are written out as a continuous-integration workflow in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml), which runs the freeze gate, the lint, the
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml), covering the freeze gate, the lint, the
 deterministic-core suite with coverage, the agent-training suite and the data-pipeline suite.
+Actions is not enabled on this repository, so we run those gates locally with the commands above.
 
 ## Repository layout
 
