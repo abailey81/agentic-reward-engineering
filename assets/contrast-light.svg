@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="402" viewBox="0 0 1400 402" role="img">
+<rect x="0.5" y="0.5" width="1399.0" height="401.0" rx="14" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<text x="50.0" y="46.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13.5" font-weight="400" fill="#818b98" text-anchor="start">src/feedback/schema.py</text>
+<rect x="50.0" y="74.0" width="640.0" height="284.0" rx="10" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<line x1="50.0" y1="114.0" x2="690.0" y2="114.0" stroke="#d1d9e0" stroke-width="1" stroke-linecap="butt"/>
+<rect x="50.0" y="74.0" width="4" height="40" fill="#0072B2"/>
+<text x="70.0" y="100.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="15.5" font-weight="600" fill="#0072B2" text-anchor="start">distributional</text>
+<text x="670.0" y="100.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" fill="#59636e" text-anchor="end">treatment</text>
+<rect x="710.0" y="74.0" width="640.0" height="284.0" rx="10" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<line x1="710.0" y1="114.0" x2="1350.0" y2="114.0" stroke="#d1d9e0" stroke-width="1" stroke-linecap="butt"/>
+<rect x="710.0" y="74.0" width="4" height="40" fill="#D55E00"/>
+<text x="730.0" y="100.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="15.5" font-weight="600" fill="#D55E00" text-anchor="start">scalar</text>
+<text x="1330.0" y="100.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" fill="#59636e" text-anchor="end">control</text>
+<text x="70.0" y="146.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#59636e" text-anchor="start">Your previous reward scored: 0.830000 (validation Deflated Sharpe).</text>
+<text x="70.0" y="172.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">Realized-return tail diagnostics (training period):</text>
+<text x="70.0" y="198.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  CVaR 5%: -0.0410</text>
+<text x="70.0" y="224.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  CVaR 10%: -0.0290</text>
+<text x="70.0" y="250.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  CVaR 25%: -0.0160</text>
+<text x="70.0" y="276.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  CVaR 1%: -0.0670  (high-variance estimate)</text>
+<text x="70.0" y="302.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  left-tail mass: +0.0610</text>
+<text x="70.0" y="328.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#0072B2" text-anchor="start">  left-tail skew: -0.3800</text>
+<text x="730.0" y="146.0" font-family="ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="400" fill="#59636e" text-anchor="start">Your previous reward scored: 0.830000 (validation Deflated Sharpe).</text>
+<rect x="730.0" y="162.0" width="600.0" height="174.0" rx="8" fill="none" stroke="#d1d9e0" stroke-width="1" stroke-dasharray="5 5"/>
+<text x="1030.0" y="254.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" fill="#818b98" text-anchor="middle">no further lines</text>
+<text x="700.0" y="384.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" fill="#818b98" text-anchor="middle">identical prompt, identical agent, identical budget</text>
+</svg>
