@@ -279,7 +279,7 @@ places.
 | Design-hash drift | `make freeze-check` | 23 consistency checks over the nine frozen artefacts |
 | Lint | `make lint` | `src`, `tests`, `scripts` |
 | Types | `make typecheck` | `src` |
-| Tests | `make test` | 3,008 on this tree: 2,970 deterministic-core, 15 agent-training, 23 data-pipeline |
+| Tests | `make test` | 3,008 collected on this tree with none failing: 2,970 deterministic-core, 15 agent-training, 23 data-pipeline |
 | Coverage floor | `pytest --cov=src` | 88 per cent of `src` after documented exclusions |
 | Mutation-testing exhibit | `make mutation` | The core numeric modules |
 | Supply-chain scan | `make audit` | The pinned dependency set |
