@@ -182,6 +182,9 @@ make test-fast         # the deterministic core, with no GPU and no network
 make reproduce         # a keyless golden reproduction on a synthetic panel
 ```
 
+Without `make`, the same three are `python scripts/freeze.py --check`, `python -m pytest -m "not
+slow"` and `python scripts/reproduce_synthetic.py --check`.
+
 The deterministic core, which covers inference, measurement, the sandbox, the baselines and the
 environment, runs on a light scientific stack. In practice only the agent-training and
 model-authoring paths need PyTorch, Stable-Baselines3 and an API key.

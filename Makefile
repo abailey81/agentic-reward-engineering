@@ -5,10 +5,14 @@
 PY ?= python
 VENV ?= .venv
 VPY := $(VENV)/bin/python
+# A venv puts its interpreter under Scripts/ on Windows and bin/ everywhere else.
+ifeq ($(OS),Windows_NT)
+VPY := $(VENV)/Scripts/python.exe
+endif
 
 .DEFAULT_GOAL := help
-.PHONY: help venv install install-dev test test-fast lint format typecheck audit mutation \
-        smoke freeze freeze-check power campaign analyze lock clean paper wordcount prereg-bundle
+.PHONY: help venv install install-dev test test-fast test-pipeline lint format typecheck audit mutation \
+        smoke freeze freeze-check reproduce power campaign analyze figures lock clean prereg-bundle
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
